@@ -1,0 +1,9 @@
+(muhe(
+        (yafib (mita (si)
+                (dala ((shato si 0) 0)
+                        (da (dala ((aba si du) unu)
+                                (da (celi (yafib(movo si du)) (yafib(movo si unu))))
+                        ))
+                )
+        ))
+))
