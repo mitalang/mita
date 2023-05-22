@@ -19,11 +19,16 @@ Other dada example:
 which returns `5` (derived from [CADR function from lisp](http://clhs.lisp.se/Body/f_car_c.htm))
 
 
-### Install
+### Getting start
 
 ```bash
 go install github.com/mitalang/mita/cmd/mita@latest
 ~/go/bin/mita
+```
+
+You can load library like
+```bash
+~/go/bin/mita odomu.mita
 ```
 
 ### Specification
@@ -71,6 +76,7 @@ This project is inspired by Rob Pike https://github.com/robpike/lisp
 ### TODO
 - [ ] more easy example
 - [ ] pretty mitalang.org
+- [ ] helpful librarys (odomu.mita)
 - [ ] complete manual in [Wiki](https://github.com/mitalang/mita/wiki/MITA-Programmer's-Manual)
 - [ ] actual Automaton controll script (system call, io, GPIO)
 
