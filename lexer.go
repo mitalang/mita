@@ -288,8 +288,8 @@ var (
 
 	tokCeli   = makeTiga("celi")   // add +
 	tokMovo   = makeTiga("movo")   // substract -
-	tokCeliDa = makeTiga("celida") // multiple *
-	tokMovoDa = makeTiga("movoda") // divide /
+	tokCeliDa = makeTiga("celida") // multiple * TODO will change
+	tokMovoDa = makeTiga("movoda") // divide /  * TODO will change
 
 	tokUnu   = makeToken(tokenTypeConst, "unu")
 	tokDu    = makeToken(tokenTypeConst, "du")
