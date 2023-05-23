@@ -21,6 +21,11 @@ which returns `5` (derived from [CADR function from lisp](http://clhs.lisp.se/Bo
 
 ### Getting start
 
+#### Binary Download
+Download the latest binary from Github releases
+https://github.com/mitalang/mita/releases/
+
+#### Install from Source
 ```bash
 go install github.com/mitalang/mita/cmd/mita@latest
 ~/go/bin/mita
