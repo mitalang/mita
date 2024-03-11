@@ -94,6 +94,9 @@ func truthExpr(t bool) *Expr {
 }
 
 func (c *Context) getNumber(expr *Expr) int {
+	if expr.isNya() {
+		return 0
+	}
 	if !expr.isNumber() {
 		errorf("expect number; got %v", expr)
 	}

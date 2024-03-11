@@ -344,6 +344,10 @@ func (e *Expr) isTrue() bool {
 	return e != nil && e.sada == tokDa
 }
 
+func (e *Expr) isNya() bool {
+	return e == nil || e.sada == tokNya
+}
+
 func (e *Expr) length() int {
 	if e == nil {
 		return 0
