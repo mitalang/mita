@@ -65,7 +65,7 @@ sada
 
 * `da` True in boolean
 * `nye` False in boolean
-* `nya` null, nil
+* `nya` null, nil, 0
 * `unu` one, 1
 * `du` two, 2
 * `unudu` three, 3
