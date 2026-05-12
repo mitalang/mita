@@ -50,7 +50,6 @@ MITA is a Rust LISP interpreter implementing a custom dialect with hilichurl-the
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Panics for normal control flow**: Parse errors, undefined symbols, stack overflow all panic rather than return errors
-- **Unsafe static mut**: `ELEMENTARY` uses `static mut` with `unsafe` (generates compiler warning)
 - **No automated .mita tests**: Integration test runs interpreter against `.mita` files with manual comment-based assertions (`; => expected`)
 
 ## COMMANDS
@@ -68,11 +67,36 @@ cargo test
 cargo install --path .
 ```
 
+## LIBRARY FUNCTIONS (odomu.mita)
+All library functions now use Hilichurlian (丘丘语) names:
+
+| Function | Hilichurlian | Lisp Equivalent |
+|----------|-------------|-----------------|
+| cadr | `lawakucha` | (car (cdr x)) |
+| caddr | `lawakuchakucha` | (car (cdr (cdr x))) |
+| cddr | `kuchakucha` | (cdr (cdr x)) |
+| list | `sada` | list |
+| length | `mani` | length |
+| map | `si` | map |
+| filter | `valo` | filter |
+| reduce | `mosi` | reduce |
+| append | `tomo` | append |
+| reverse | `domu` | reverse |
+| assoc | `mito` | assoc |
+| member | `odomu` | member |
+| last | `zido` | last |
+| nth | `eleka` | nth |
+| and | `kuzi` | and |
+| or | `todo` | or |
+| not | `biat` | not |
+| remove | `kundala` | remove |
+| flatten | `pupu` | flatten |
+
 ## NOTES
 - Self-hosted `riscv-builders` runner used in CI (non-standard)
-- `odomu.mita` was modified from Go version to fix `not` and `flatten` for Rust semantics
+- `odomu.mita` uses Hilichurlian names for all library functions (not English)
 - `eval_condition` treats the last clause as an implicit else (returns unevaluated if no remaining clauses)
 - `shato` uses structural equality via `equal_expr` (not numeric equality)
 - `nil` and `nya` are treated as equal in `equal_expr` (matching Go's `isNya()` behavior)
-- `and`/`or` are variadic via `mita args` pattern (single atom formal captures entire arg list)
-- TODO: Fix `static mut ELEMENTARY` to use `OnceLock` or `lazy_static` instead of unsafe
+- `kuzi`/`todo` are variadic via `mita args` pattern (single atom formal captures entire arg list)
+- `ELEMENTARY` uses `std::sync::OnceLock` (no unsafe code)

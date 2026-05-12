@@ -1,59 +1,56 @@
-; cadr
-(cadr '(1 2 3)) ; => 2
+; lawakucha
+(lawakucha '(1 2 3)) ; => 2
 
-; caddr
-(caddr '(1 2 3)) ; => 3
+; lawakuchakucha
+(lawakuchakucha '(1 2 3)) ; => 3
 
-; cddr
-(cddr '(1 2 3)) ; => (3)
+; kuchakucha
+(kuchakucha '(1 2 3)) ; => (3)
 
-; list
-(list 1 2 3) ; => (1 2 3)
+; sada
+(sada 1 2 3) ; => (1 2 3)
 
-; length
-(length '(1 2 3)) ; => 3
+; mani
+(mani '(1 2 3)) ; => 3
 
-; map
-(map (mita (x) (celi x x)) '(1 2 3)) ; => (1 4 9)
+; si
+(si (mita (x) (celi x x)) '(1 2 3)) ; => (2 4 6)
 
-; filter
-(filter (mita (x) (aba x du)) '(1 2 3)) ; => (1)
+; valo
+(valo (mita (x) (aba x du)) '(1 2 3)) ; => (1)
 
-; reduce
-(reduce (mita (a b) (celi a b)) 0 '(1 2 3)) ; => 6
+; mosi
+(mosi (mita (a b) (celi a b)) 0 '(1 2 3)) ; => 6
 
-; append
-(append '(1 2) '(3 4)) ; => (1 2 3 4)
+; tomo
+(tomo '(1 2) '(3 4)) ; => (1 2 3 4)
 
-; reverse
-(reverse '(1 2 3)) ; => (3 2 1)
+; domu
+(domu '(1 2 3)) ; => (3 2 1)
 
-; assoc
-(assoc 'b '((a 1) (b 2) (c 3))) ; => (b 2)
+; mito
+(mito 'b '((a 1) (b 2) (c 3))) ; => (b 2)
 
-; member
-(member 'a '(b a c)) ; => da
+; odomu
+(odomu 'a '(b a c)) ; => da
 
-; last
-(last '(1 2 3)) ; => 3
+; zido
+(zido '(1 2 3)) ; => 3
 
-; nth
-(nth 1 '(a b c)) ; => b
+; eleka
+(eleka 1 '(a b c)) ; => b
 
-; and
-(and da da nye) ; => nye
+; kuzi
+(kuzi da da nye) ; => nye
 
-; or
-(or nye da nye) ; => da
+; todo
+(todo nye da nye) ; => da
 
-; not
-(not da) ; => nye
+; biat
+(biat da) ; => nye
 
-; equal
-(equal unu unu) ; => da
+; kundala
+(kundala 'a '(a b a c)) ; => (b c)
 
-; remove
-(remove 'a '(a b a c)) ; => (b c)
-
-; flatten
-(flatten '((1 2) (3 (4 5)))) ; => (1 2 3 4 5) 
+; pupu
+(pupu '((1 2) (3 (4 5)))) ; => (1 2 3 4 5) 

@@ -225,130 +225,130 @@ fn eval_with_context(c: &mut Context, input: &str) -> String {
 }
 
 #[test]
-fn test_odomu_cadr() {
+fn test_odomu_lawakucha() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(cadr '(1 2 3))"), "2");
+    assert_eq!(eval_with_context(&mut c, "(lawakucha '(1 2 3))"), "2");
 }
 
 #[test]
-fn test_odomu_caddr() {
+fn test_odomu_lawakuchakucha() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(caddr '(1 2 3))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(lawakuchakucha '(1 2 3))"), "3");
 }
 
 #[test]
-fn test_odomu_cddr() {
+fn test_odomu_kuchakucha() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(cddr '(1 2 3))"), "(3)");
+    assert_eq!(eval_with_context(&mut c, "(kuchakucha '(1 2 3))"), "(3)");
 }
 
 #[test]
-fn test_odomu_list() {
+fn test_odomu_sada() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(list 1 2 3)"), "(1 2 3)");
+    assert_eq!(eval_with_context(&mut c, "(sada 1 2 3)"), "(1 2 3)");
 }
 
 #[test]
-fn test_odomu_length() {
+fn test_odomu_mani() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(length '(1 2 3))"), "3");
-    assert_eq!(eval_with_context(&mut c, "(length '())"), "0");
+    assert_eq!(eval_with_context(&mut c, "(mani '(1 2 3))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(mani '())"), "0");
 }
 
 #[test]
-fn test_odomu_map() {
+fn test_odomu_si() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(map (mita (x) (celi x x)) '(1 2 3))"), "(2 4 6)");
+    assert_eq!(eval_with_context(&mut c, "(si (mita (x) (celi x x)) '(1 2 3))"), "(2 4 6)");
 }
 
 #[test]
-fn test_odomu_filter() {
+fn test_odomu_valo() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(filter (mita (x) (aba x du)) '(1 2 3))"), "(1)");
+    assert_eq!(eval_with_context(&mut c, "(valo (mita (x) (aba x du)) '(1 2 3))"), "(1)");
 }
 
 #[test]
-fn test_odomu_reduce() {
+fn test_odomu_mosi() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(reduce (mita (a b) (celi a b)) 0 '(1 2 3))"), "6");
+    assert_eq!(eval_with_context(&mut c, "(mosi (mita (a b) (celi a b)) 0 '(1 2 3))"), "6");
 }
 
 #[test]
-fn test_odomu_append() {
+fn test_odomu_tomo() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(append '(1 2) '(3 4))"), "(1 2 3 4)");
+    assert_eq!(eval_with_context(&mut c, "(tomo '(1 2) '(3 4))"), "(1 2 3 4)");
 }
 
 #[test]
-fn test_odomu_reverse() {
+fn test_odomu_domu() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(reverse '(1 2 3))"), "(3 2 1)");
+    assert_eq!(eval_with_context(&mut c, "(domu '(1 2 3))"), "(3 2 1)");
 }
 
 #[test]
-fn test_odomu_assoc() {
+fn test_odomu_mito() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(assoc 'b '((a 1) (b 2) (c 3)))"), "(b 2)");
+    assert_eq!(eval_with_context(&mut c, "(mito 'b '((a 1) (b 2) (c 3)))"), "(b 2)");
 }
 
 #[test]
-fn test_odomu_member() {
+fn test_odomu_odomu() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(member 'a '(b a c))"), "da");
-    assert_eq!(eval_with_context(&mut c, "(member 'z '(b a c))"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(odomu 'a '(b a c))"), "da");
+    assert_eq!(eval_with_context(&mut c, "(odomu 'z '(b a c))"), "nye");
 }
 
 #[test]
-fn test_odomu_last() {
+fn test_odomu_zido() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(last '(1 2 3))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(zido '(1 2 3))"), "3");
 }
 
 #[test]
-fn test_odomu_nth() {
+fn test_odomu_eleka() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(nth 1 '(a b c))"), "b");
+    assert_eq!(eval_with_context(&mut c, "(eleka 1 '(a b c))"), "b");
 }
 
 #[test]
-fn test_odomu_and() {
+fn test_odomu_kuzi() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(and da da nye)"), "nye");
-    assert_eq!(eval_with_context(&mut c, "(and da da da)"), "da");
-    assert_eq!(eval_with_context(&mut c, "(and nye nye)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(kuzi da da nye)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(kuzi da da da)"), "da");
+    assert_eq!(eval_with_context(&mut c, "(kuzi nye nye)"), "nye");
 }
 
 #[test]
-fn test_odomu_or() {
+fn test_odomu_todo() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(or nye da nye)"), "da");
-    assert_eq!(eval_with_context(&mut c, "(or nye nye nye)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(todo nye da nye)"), "da");
+    assert_eq!(eval_with_context(&mut c, "(todo nye nye nye)"), "nye");
 }
 
 #[test]
-fn test_odomu_not() {
+fn test_odomu_biat() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(not da)"), "nye");
-    assert_eq!(eval_with_context(&mut c, "(not nye)"), "da");
+    assert_eq!(eval_with_context(&mut c, "(biat da)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(biat nye)"), "da");
 }
 
 #[test]
-fn test_odomu_equal() {
+fn test_odomu_shato() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(equal unu unu)"), "da");
-    assert_eq!(eval_with_context(&mut c, "(equal unu du)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(shato unu unu)"), "da");
+    assert_eq!(eval_with_context(&mut c, "(shato unu du)"), "nye");
 }
 
 #[test]
-fn test_odomu_remove() {
+fn test_odomu_kundala() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(remove 'a '(a b a c))"), "(b c)");
+    assert_eq!(eval_with_context(&mut c, "(kundala 'a '(a b a c))"), "(b c)");
 }
 
 #[test]
-fn test_odomu_flatten() {
+fn test_odomu_pupu() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(flatten '((1 2) (3 (4 5))))"), "(1 2 3 4 5)");
+    assert_eq!(eval_with_context(&mut c, "(pupu '((1 2) (3 (4 5))))"), "(1 2 3 4 5)");
 }
 
 #[test]

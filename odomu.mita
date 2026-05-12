@@ -1,93 +1,90 @@
 (muhe(
-  ; cadr: (cadr '(1 2 3)) => 2
-  (cadr (mita (lst) (lawa (kucha lst))))
+  ; cadr: (lawakucha '(1 2 3)) => 2
+  (lawakucha (mita (lst) (lawa (kucha lst))))
 
-  ; caddr: (caddr '(1 2 3)) => 3
-  (caddr (mita (lst) (lawa (kucha (kucha lst)))))
+  ; caddr: (lawakuchakucha '(1 2 3)) => 3
+  (lawakuchakucha (mita (lst) (lawa (kucha (kucha lst)))))
 
-  ; cddr: (cddr '(1 2 3)) => (3)
-  (cddr (mita (lst) (kucha (kucha lst))))
+  ; cddr: (kuchakucha '(1 2 3)) => (3)
+  (kuchakucha (mita (lst) (kucha (kucha lst))))
 
-  ; list: (list 1 2 3) => (1 2 3)
-  (list (mita args args))
+  ; sada: (sada 1 2 3) => (1 2 3)
+  (sada (mita args args))
 
-  ; length: (length '(1 2 3)) => 3
-  (length (mita (lst)
-    (dala ((or (shato lst nya) (or (shato lst '()) (shato lst nil))) 0)
-      (da (celi unu (length (kucha lst)))))))
+  ; mani: (mani '(1 2 3)) => 3
+  (mani (mita (lst)
+    (dala ((todo (shato lst nya) (todo (shato lst '()) (shato lst nil))) 0)
+      (da (celi unu (mani (kucha lst)))))))
 
-  ; map: (map (mita (x) (celi x x)) '(1 2 3)) => (1 4 9)
-  (map (mita (f lst)
+  ; si: (si (mita (x) (celi x x)) '(1 2 3)) => (2 4 6)
+  (si (mita (f lst)
     (dala ((shato lst nya) '())
-      (da (upa (f (lawa lst)) (map f (kucha lst)))))))
+      (da (upa (f (lawa lst)) (si f (kucha lst)))))))
 
-  ; filter: (filter (mita (x) (aba x du)) '(1 2 3)) => (1)
-  (filter (mita (pred lst)
+  ; valo: (valo (mita (x) (aba x du)) '(1 2 3)) => (1)
+  (valo (mita (pred lst)
     (dala ((shato lst nya) '())
       (da (dala ((pred (lawa lst))
-        (upa (lawa lst) (filter pred (kucha lst))))
-        (filter pred (kucha lst)))))))
+        (upa (lawa lst) (valo pred (kucha lst))))
+        (valo pred (kucha lst)))))))
 
-  ; reduce: (reduce (mita (a b) (celi a b)) 0 '(1 2 3)) => 6
-  (reduce (mita (f acc lst)
+  ; mosi: (mosi (mita (a b) (celi a b)) 0 '(1 2 3)) => 6
+  (mosi (mita (f acc lst)
     (dala ((shato lst nya) acc)
-      (da (reduce f (f acc (lawa lst)) (kucha lst))))))
+      (da (mosi f (f acc (lawa lst)) (kucha lst))))))
 
-  ; append: (append '(1 2) '(3 4)) => (1 2 3 4)
-  (append (mita (a b)
+  ; tomo: (tomo '(1 2) '(3 4)) => (1 2 3 4)
+  (tomo (mita (a b)
     (dala ((shato a nya) b)
-      (da (upa (lawa a) (append (kucha a) b))))))
+      (da (upa (lawa a) (tomo (kucha a) b))))))
 
-  ; reverse: (reverse '(1 2 3)) => (3 2 1)
-  (reverse (mita (lst)
-    (reduce (mita (acc x) (upa x acc)) '() lst)))
+  ; domu: (domu '(1 2 3)) => (3 2 1)
+  (domu (mita (lst)
+    (mosi (mita (acc x) (upa x acc)) '() lst)))
 
-  ; assoc: (assoc 'b '((a 1) (b 2) (c 3))) => (b 2)
-  (assoc (mita (key alist)
+  ; mito: (mito 'b '((a 1) (b 2) (c 3))) => (b 2)
+  (mito (mita (key alist)
     (dala ((shato alist nya) nye)
       (da (dala ((shato key (lawa (lawa alist))) (lawa alist))
-        (assoc key (kucha alist)))))))
+        (mito key (kucha alist)))))))
 
-  ; member: (member 'a '(b a c)) => da
-  (member (mita (x lst)
+  ; odomu: (odomu 'a '(b a c)) => da
+  (odomu (mita (x lst)
     (dala ((shato lst nya) nye)
       (da (dala ((shato x (lawa lst)) da)
-        (member x (kucha lst)))))))
+        (odomu x (kucha lst)))))))
 
-  ; last: (last '(1 2 3)) => 3
-  (last (mita (lst)
+  ; zido: (zido '(1 2 3)) => 3
+  (zido (mita (lst)
     (dala ((shato (kucha lst) nya) (lawa lst))
-      (da (last (kucha lst))))))
+      (da (zido (kucha lst))))))
 
-  ; nth: (nth 1 '(a b c)) => b
-  (nth (mita (n lst)
+  ; eleka: (eleka 1 '(a b c)) => b
+  (eleka (mita (n lst)
     (dala ((shato n 0) (lawa lst))
-      (da (nth (movo n unu) (kucha lst))))))
+      (da (eleka (movo n unu) (kucha lst))))))
 
-  ; and: (and da da nye) => nye
-  (and (mita args
-    (reduce (mita (a b) (dala ((shato a da) b) a)) da args)))
+  ; kuzi: (kuzi da da nye) => nye
+  (kuzi (mita args
+    (mosi (mita (a b) (dala ((shato a da) b) a)) da args)))
 
-  ; or: (or nye da nye) => da
-  (or (mita args
-    (reduce (mita (a b) (dala ((shato a da) da) b)) nye args)))
+  ; todo: (todo nye da nye) => da
+  (todo (mita args
+    (mosi (mita (a b) (dala ((shato a da) da) b)) nye args)))
 
-  ; not: (not (da)) => nye
-  (not (mita (x) (dala ((shato x da) nye) da)))
+  ; biat: (biat (da)) => nye
+  (biat (mita (x) (dala ((shato x da) nye) da)))
 
-  ; equal: (equal a b) => da/nye
-  (equal (mita (a b) (shato a b)))
-
-  ; remove: (remove 'a '(a b a c)) => (b c)
-  (remove (mita (x lst)
+  ; kundala: (kundala 'a '(a b a c)) => (b c)
+  (kundala (mita (x lst)
     (dala ((shato lst nya) '())
-      (da (dala ((shato x (lawa lst)) (remove x (kucha lst)))
-        (upa (lawa lst) (remove x (kucha lst))))))))
+      (da (dala ((shato x (lawa lst)) (kundala x (kucha lst)))
+        (upa (lawa lst) (kundala x (kucha lst))))))))
 
-  ; flatten: (flatten '((1 2) (3 (4 5)))) => (1 2 3 4 5)
-  (flatten (mita (lst)
+  ; pupu: (pupu '((1 2) (3 (4 5)))) => (1 2 3 4 5)
+  (pupu (mita (lst)
     (dala ((shato lst nya) '())
       (da (dala ((shato lst (upa (lawa lst) (kucha lst)))
-                 (append (flatten (lawa lst)) (flatten (kucha lst))))
+                 (tomo (pupu (lawa lst)) (pupu (kucha lst))))
         (upa lst '()))))))
 ))
