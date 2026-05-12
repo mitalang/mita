@@ -1,67 +1,78 @@
 # PROJECT KNOWLEDGE BASE
 
 **Generated:** 2026-05-12
-**Commit:** f8cb608
+**Commit:** f030045
 **Branch:** main
 
 ## OVERVIEW
-MITA is a Go 1.18 LISP interpreter implementing a custom dialect with hilichurl-themed keywords (`lawa` = car, `kucha` = cdr, `upa` = cons). Derived from Rob Pike's pedagogical LISP.
+MITA is a Rust LISP interpreter implementing a custom dialect with hilichurl-themed keywords (`lawa` = car, `kucha` = cdr, `upa` = cons). Derived from Rob Pike's pedagogical LISP. Rewritten from Go to Rust.
 
 ## STRUCTURE
 ```
 .
-├── cmd/mita/       # CLI binary entry point
-├── examples/       # .mita sample programs
-├── .github/        # CI workflows (3 files)
-├── *.go            # Interpreter core (root package)
-├── *_test.go       # Go unit tests
-├── odomu.mita      # Standard library
-└── go.mod          # Module: github.com/mitalang/mita
+├── Cargo.toml       # Rust project manifest
+├── Cargo.lock       # Dependency lock file
+├── src/             # Library source code
+│   ├── lib.rs       # Library entry point (pub modules)
+│   ├── main.rs      # CLI binary entry point
+│   ├── token.rs     # Lexer and Token types
+│   ├── parser.rs    # Parser (S-expression parser)
+│   ├── expr.rs      # Expr enum (Nil, Atom, Cons)
+│   ├── eval.rs      # Evaluator (Context, Scope, apply)
+│   └── elementary.rs # Built-in functions (lawa, kucha, celi, etc.)
+├── tests/           # Integration tests
+│   ├── parse_tests.rs # Parser unit tests (ported from Go)
+│   └── eval_tests.rs  # Evaluator unit tests (ported from Go)
+├── examples/        # .mita sample programs
+├── .github/         # CI workflows
+├── odomu.mita       # Standard library
+└── AGENTS.md        # This file
 ```
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Add built-in function | `elementary.go` + `eval.go` | Register in `evalInit()`, implement as `(*Context).xxxFunc` |
-| Change lexer/tokenizer | `lexer.go` | Run `go generate` after changing `TokenType` constants |
-| Modify parser/AST | `parse.go` | `Expr` struct and `Parser` methods |
-| Change evaluation logic | `eval.go` | `Context.Eval()`, stack management |
-| Modify CLI behavior | `cmd/mita/main.go` | REPL, flags, file loading |
+| Add built-in function | `src/elementary.rs` + `src/eval.rs` | Register in `ELEMENTARY` HashMap, implement as `Context::xxx_func` |
+| Change lexer/tokenizer | `src/token.rs` | `TokenType` enum and `Lexer` struct |
+| Modify parser/AST | `src/parser.rs` + `src/expr.rs` | `Expr` enum and `Parser` methods |
+| Change evaluation logic | `src/eval.rs` | `Context::eval()`, `Context::apply()`, stack management |
+| Modify CLI behavior | `src/main.rs` | REPL, flags, file loading, panic recovery |
 | Add language examples | `examples/*.mita` | MITA source files |
 | Update stdlib | `odomu.mita` | Loaded at runtime by CLI |
 
 ## CONVENTIONS
-- **Flat package structure**: All library code at root as `package mita` (no `pkg/` or `internal/`)
-- **Panic-driven errors**: `errorf()` and `lexError()` panic for parse/eval errors; CLI recovers in `handler()`
-- **Go generate**: `lexer.go` has `//go:generate stringer -type TokenType -trimprefix token`
+- **Library + binary**: `src/lib.rs` exports public API; `src/main.rs` is the CLI binary
+- **Panic-driven errors**: `errorf()` panics with `panic_any(Error(...))`; CLI recovers via `catch_unwind`
 - **MITA naming**: Built-ins use fictional language names (`celi` = +, `movo` = -, `shato` = ==)
-- **No external dependencies**: Standard library only (empty `go.sum`)
+- **No external dependencies**: Standard library only (no `cargo` dependencies)
+- **Expr enum**: Uses `Rc<Expr>` for shared ownership (no GC, reference counted)
+- **Special forms**: `mita` (lambda), `dala` (cond), `plata` (quote), `muhe` (defun)
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Panics for normal control flow**: Parse errors, undefined symbols, stack overflow all panic rather than return errors
-- **Go version drift**: `go.mod` declares 1.18, CI uses 1.21
-- **No automated .mita tests**: Integration test workflow runs interpreter against `.mita` files with manual comment-based assertions (`; => expected`)
+- **Unsafe static mut**: `ELEMENTARY` uses `static mut` with `unsafe` (generates compiler warning)
+- **No automated .mita tests**: Integration test runs interpreter against `.mita` files with manual comment-based assertions (`; => expected`)
 
 ## COMMANDS
 ```bash
 # Build CLI
-go build -o mita ./cmd/mita/main.go
+cargo build --release
 
 # Run tests
-go test -v ./...
+cargo test
 
 # Run integration tests
-./mita odomu.mita examples/odomu_test.mita
-
-# Generate stringer code
-go generate ./...
+./target/release/mita odomu.mita examples/odomu_test.mita
 
 # Install from source
-go install github.com/mitalang/mita/cmd/mita@latest
+cargo install --path .
 ```
 
 ## NOTES
 - Self-hosted `riscv-builders` runner used in CI (non-standard)
-- GoReleaser releases from `cmd/mita` without explicit `.goreleaser.yaml` config
-- `tokentype_string.go` is auto-generated; edit `lexer.go` and re-run `go generate`
-- TODOs in codebase: ascii lambda support (eval.go), operator renames (lexer.go celida/movoda)
+- `odomu.mita` was modified from Go version to fix `not` and `flatten` for Rust semantics
+- `eval_condition` treats the last clause as an implicit else (returns unevaluated if no remaining clauses)
+- `shato` uses structural equality via `equal_expr` (not numeric equality)
+- `nil` and `nya` are treated as equal in `equal_expr` (matching Go's `isNya()` behavior)
+- `and`/`or` are variadic via `mita args` pattern (single atom formal captures entire arg list)
+- TODO: Fix `static mut ELEMENTARY` to use `OnceLock` or `lazy_static` instead of unsafe
