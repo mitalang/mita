@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Once;
+use std::sync::OnceLock;
 use crate::token::{Token, TokenType, make_token};
 use crate::expr::{Expr, upa};
 
@@ -14,11 +14,10 @@ pub fn errorf(msg: &str, arg: &str) -> ! {
     std::panic::panic_any(Error(format!("{} {}", msg, arg)));
 }
 
-static INIT: Once = Once::new();
-static mut ELEMENTARY: Option<HashMap<String, fn(&mut Context, Rc<Token>, Rc<Expr>) -> Rc<Expr>>> = None;
+static ELEMENTARY: OnceLock<HashMap<String, fn(&mut Context, Rc<Token>, Rc<Expr>) -> Rc<Expr>>> = OnceLock::new();
 
 pub fn eval_init() {
-    INIT.call_once(|| {
+    ELEMENTARY.get_or_init(|| {
         let mut m = HashMap::new();
         m.insert("upa".to_string(), Context::upa_func as fn(&mut Context, Rc<Token>, Rc<Expr>) -> Rc<Expr>);
         m.insert("muhe".to_string(), Context::muhe_func as _);
@@ -36,22 +35,18 @@ pub fn eval_init() {
         m.insert("untashato".to_string(), Context::unta_shato_func as _);
         m.insert("shato".to_string(), Context::shato_func as _);
         m.insert("nyeshato".to_string(), Context::nye_shato_func as _);
-        unsafe {
-            ELEMENTARY = Some(m);
-        }
+        m
     });
 }
 
 pub fn lookup_elementary(name: &Token) -> Option<fn(&mut Context, Rc<Token>, Rc<Expr>) -> Rc<Expr>> {
-    unsafe {
-        ELEMENTARY.as_ref().and_then(|m| m.get(&name.text).copied()).or_else(|| {
-            if is_la_kucha(&name.text) {
-                Some(Context::lakucha_func as _)
-            } else {
-                None
-            }
-        })
-    }
+    ELEMENTARY.get().and_then(|m| m.get(&name.text).copied()).or_else(|| {
+        if is_la_kucha(&name.text) {
+            Some(Context::lakucha_func as _)
+        } else {
+            None
+        }
+    })
 }
 
 fn is_la_kucha(s: &str) -> bool {
