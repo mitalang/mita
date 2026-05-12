@@ -73,7 +73,7 @@
     (reduce (mita (a b) (dala ((shato a da) da) b)) nye args)))
 
   ; not: (not (da)) => nye
-  (not (mita (x) (nyeshato x da)))
+  (not (mita (x) (dala ((shato x da) nye) da)))
 
   ; equal: (equal a b) => da/nye
   (equal (mita (a b) (shato a b)))
@@ -87,7 +87,7 @@
   ; flatten: (flatten '((1 2) (3 (4 5)))) => (1 2 3 4 5)
   (flatten (mita (lst)
     (dala ((shato lst nya) '())
-      (da (dala ((shato (lawa lst) nya) (flatten (kucha lst)))
-        (dala ((shato (lawa lst) '()) (flatten (kucha lst)))
-          (append (flatten (lawa lst)) (flatten (kucha lst)))))))))
+      (da (dala ((shato lst (upa (lawa lst) (kucha lst)))
+                 (append (flatten (lawa lst)) (flatten (kucha lst))))
+        (upa lst '()))))))
 ))
