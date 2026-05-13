@@ -67,7 +67,7 @@ sada
 * `lawakuchakucha` caddr (car of cdr of cdr)
 * `kuchakucha` cddr (cdr of cdr)
 * `sada` list constructor
-* `mani` list length
+* `tiga` list length
 * `si` map
 * `valo` filter
 * `mosi` reduce

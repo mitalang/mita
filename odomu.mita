@@ -11,10 +11,10 @@
   ; sada: (sada 1 2 3) => (1 2 3)
   (sada (mita args args))
 
-  ; mani: (mani '(1 2 3)) => 3
-  (mani (mita (lst)
+  ; tiga: (tiga '(1 2 3)) => 3
+  (tiga (mita (lst)
     (dala ((todo (shato lst nya) (todo (shato lst '()) (shato lst nil))) 0)
-      (da (celi unu (mani (kucha lst)))))))
+      (da (celi unu (tiga (kucha lst)))))))
 
   ; si: (si (mita (x) (celi x x)) '(1 2 3)) => (2 4 6)
   (si (mita (f lst)

@@ -76,7 +76,7 @@ All library functions now use Hilichurlian (丘丘语) names:
 | caddr | `lawakuchakucha` | (car (cdr (cdr x))) |
 | cddr | `kuchakucha` | (cdr (cdr x)) |
 | list | `sada` | list |
-| length | `mani` | length |
+| length | `tiga` | length |
 | map | `si` | map |
 | filter | `valo` | filter |
 | reduce | `mosi` | reduce |

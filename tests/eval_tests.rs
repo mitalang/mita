@@ -249,10 +249,10 @@ fn test_odomu_sada() {
 }
 
 #[test]
-fn test_odomu_mani() {
+fn test_odomu_tiga() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(mani '(1 2 3))"), "3");
-    assert_eq!(eval_with_context(&mut c, "(mani '())"), "0");
+    assert_eq!(eval_with_context(&mut c, "(tiga '(1 2 3))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(tiga '())"), "0");
 }
 
 #[test]
