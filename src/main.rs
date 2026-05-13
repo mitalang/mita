@@ -76,10 +76,10 @@ fn main() {
 fn load(context: &mut mita::Context, file: &str) {
     let content = std::fs::read_to_string(file).expect("Failed to read file");
     let mut parser = mita::Parser::new(&content);
-    input(context, &mut parser, "");
+    input(context, &mut parser, "", true);
 }
 
-fn input(context: &mut mita::Context, parser: &mut mita::Parser, _prompt: &str) {
+fn input(context: &mut mita::Context, parser: &mut mita::Parser, _prompt: &str, loading: bool) {
     loop {
         match parser.skip_space() {
             '\n' => continue,
@@ -98,7 +98,10 @@ fn input(context: &mut mita::Context, parser: &mut mita::Parser, _prompt: &str) 
                     context.pop_stack();
                     parser.skip_to_end_of_line();
                 } else if e.downcast_ref::<mita::EOF>().is_some() {
-                    std::process::exit(0);
+                    if !loading {
+                        std::process::exit(0);
+                    }
+                    return;
                 } else {
                     panic_any(e);
                 }

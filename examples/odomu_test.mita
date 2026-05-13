@@ -1,3 +1,7 @@
+; odomu.mita 库函数测试
+; 需要先加载 odomu.mita
+; mita odomu.mita examples/odomu_test.mita
+
 ; lawakucha
 (lawakucha '(1 2 3)) ; => 2
 

@@ -1,1 +1,1 @@
-(dala ((shato unu du) 'yes) ('no)) ; => 'no 
+(dala ((shato unu du) 'yes) (da 'no)) ; => no 

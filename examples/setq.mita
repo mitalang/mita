@@ -1,0 +1,22 @@
+; 变量赋值示例 (plama)
+; plama = setq, 修改变量值
+
+; 基本赋值
+(tido ((x 0))
+  (plama x unu)
+  x)  ; => 1
+
+; 多次赋值
+(tido ((x 0))
+  (in
+    (plama x (celi x unu))
+    (plama x (celi x du))
+    x))  ; => 3
+
+; 交换两个变量
+(tido ((a unu) (b du))
+  (tido ((tmp a))
+    (in
+      (plama a b)
+      (plama b tmp)
+      (upa a b))))  ; => (2 . 1)

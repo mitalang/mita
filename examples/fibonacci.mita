@@ -1,9 +1,15 @@
-(muhe(
-        (yafib (mita (si)
-                (dala ((shato si 0) 0)
-                        (da (dala ((aba si du) unu)
-                                (da (celi (yafib(movo si du)) (yafib(movo si unu))))
-                        ))
-                )
-        ))
-))
+; 斐波那契数列 (Fibonacci)
+; 使用 ka (if) 递归
+(muhe
+  ((fib (mita (n)
+    (ka (aba n du)
+        n
+        (celi (fib (movo n unu))
+              (fib (movo n du))))))))
+
+; 测试
+(fib unu)    ; => 1
+(fib du)     ; => 1
+(fib unudu)  ; => 2
+(fib dudu)   ; => 3
+(fib mani)   ; => 5
