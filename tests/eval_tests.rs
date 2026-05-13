@@ -413,3 +413,32 @@ fn test_stack_depth_protection() {
     }));
     assert!(result.is_err(), "expected panic on stack overflow");
 }
+
+#[test]
+fn test_let() {
+    let mut c = Context::new(0);
+    assert_eq!(eval_with_context(&mut c, "(tido ((x 1) (y 2)) (celi x y))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(tido ((x 5)) (celi x x))"), "10");
+}
+
+#[test]
+fn test_if() {
+    let mut c = Context::new(0);
+    assert_eq!(eval_with_context(&mut c, "(ka da 'yes 'no)"), "yes");
+    assert_eq!(eval_with_context(&mut c, "(ka nye 'yes 'no)"), "no");
+    assert_eq!(eval_with_context(&mut c, "(ka (aba 2 3) 'less 'greater)"), "less");
+}
+
+#[test]
+fn test_progn() {
+    let mut c = Context::new(0);
+    assert_eq!(eval_with_context(&mut c, "(in 1 2 3)"), "3");
+    assert_eq!(eval_with_context(&mut c, "(in 'a 'b 'c)"), "c");
+}
+
+#[test]
+fn test_setq() {
+    let mut c = Context::new(0);
+    assert_eq!(eval_with_context(&mut c, "(plama x 42)"), "42");
+    assert_eq!(eval_with_context(&mut c, "(celi x 1)"), "43");
+}

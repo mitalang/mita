@@ -46,7 +46,7 @@ MITA is a Rust LISP interpreter implementing a custom dialect with hilichurl-the
 - **MITA naming**: Built-ins use fictional language names (`celi` = +, `movo` = -, `shato` = ==)
 - **No external dependencies**: Standard library only (no `cargo` dependencies)
 - **Expr enum**: Uses `Rc<Expr>` for shared ownership (no GC, reference counted)
-- **Special forms**: `mita` (lambda), `dala` (cond), `plata` (quote), `muhe` (defun)
+- **Special forms**: `mita` (lambda), `dala` (cond), `plata` (quote), `muhe` (defun), `tido` (let), `ka` (if), `in` (progn), `plama` (setq)
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Panics for normal control flow**: Parse errors, undefined symbols, stack overflow all panic rather than return errors

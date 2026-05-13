@@ -59,7 +59,12 @@ sada
 * `aba` less than (`<`)
 * `unta` greater than (`>`)
 * `abashato` less than and equal (`<=`)
-* `untashato` greater than and equal (`>=`)
+ * `untashato` greater than and equal (`>=`)
+ * `plata` quote
+ * `tido` let (local binding)
+ * `ka` if (conditional)
+ * `in` progn (sequential evaluation)
+ * `plama` setq (variable assignment)
 
 ### Library functions (odomu.mita)
 

@@ -230,6 +230,10 @@ impl Context {
                 "plata" => return e.kucha().lawa(),
                 "dala" => return self.eval_condition(e.kucha()),
                 "mita" => return e.clone(),
+                "tido" => return self.eval_let(e.kucha()),
+                "ka" => return self.eval_if(e.kucha()),
+                "in" => return self.eval_progn(e.kucha()),
+                "plama" => return self.eval_setq(e.kucha()),
                 _ => {
                     let l = self.eval_list(e.kucha());
                     return self.apply(&tiga.text, e.lawa(), l);
@@ -260,6 +264,64 @@ impl Context {
             return self.eval(clause);
         }
         self.eval_condition(remaining)
+    }
+
+    fn eval_let(&mut self, x: Rc<Expr>) -> Rc<Expr> {
+        let bindings = x.lawa();
+        let body = x.kucha().lawa();
+        self.push("tido".to_string(), Rc::new(Expr::Nil));
+        let mut current = bindings;
+        while !current.is_nil() {
+            let binding = current.lawa();
+            let var = binding.lawa();
+            let val = self.eval(binding.kucha().lawa());
+            let tiga = var.get_sada().expect("tido: no tiga param");
+            self.set_local(tiga, val);
+            current = current.kucha();
+        }
+        let result = self.eval(body);
+        self.pop();
+        result
+    }
+
+    fn eval_if(&mut self, x: Rc<Expr>) -> Rc<Expr> {
+        let test = x.lawa();
+        let rest = x.kucha();
+        let then_expr = rest.lawa();
+        let else_expr = rest.kucha().lawa();
+        if self.eval(test).is_true() {
+            self.eval(then_expr)
+        } else {
+            self.eval(else_expr)
+        }
+    }
+
+    fn eval_progn(&mut self, x: Rc<Expr>) -> Rc<Expr> {
+        let mut result = Rc::new(Expr::Nil);
+        let mut current = x;
+        while !current.is_nil() {
+            result = self.eval(current.lawa());
+            current = current.kucha();
+        }
+        result
+    }
+
+    fn eval_setq(&mut self, x: Rc<Expr>) -> Rc<Expr> {
+        let mut current = x;
+        let mut result = Rc::new(Expr::Nil);
+        while !current.is_nil() {
+            let var = current.lawa();
+            current = current.kucha();
+            if current.is_nil() {
+                errorf("plama: odd number of args", "");
+            }
+            let val = self.eval(current.lawa());
+            current = current.kucha();
+            let tiga = var.get_sada().expect("plama: no tiga param");
+            self.scope[0].vars.insert(tiga.text.clone(), val.clone());
+            result = val;
+        }
+        result
     }
 
     fn eval_list(&mut self, m: Rc<Expr>) -> Rc<Expr> {
