@@ -18,6 +18,8 @@ pub struct Context {
     pub scope: Vec<Scope>,
     pub stack_depth: usize,
     pub max_stack_depth: usize,
+    tail_expr: Option<Rc<Expr>>,
+    in_tail_position: bool,
 }
 
 const TOP: &str = "<top>";
@@ -29,6 +31,8 @@ impl Context {
             scope: Vec::new(),
             stack_depth: 0,
             max_stack_depth: depth,
+            tail_expr: None,
+            in_tail_position: false,
         };
         c.push(TOP.to_string(), Rc::new(Expr::Nil));
 
@@ -144,19 +148,63 @@ impl Context {
 
         if let Some(ref sada) = fn_expr.get_sada() {
             if let Some(elem) = lookup_elementary(sada) {
-                return elem(self, sada.clone(), x);
+                let result = elem(self, sada.clone(), x);
+                if self.max_stack_depth > 0 {
+                    self.stack_depth -= 1;
+                }
+                return result;
             }
             if sada.typ != TokenType::Tiga {
                 errorf("is not function:", &fn_expr.to_string());
             }
+            let save_tail = self.in_tail_position;
+            self.in_tail_position = false;
             let evaluated = self.eval(fn_expr);
-            return self.apply(name, evaluated, x);
+            self.in_tail_position = save_tail;
+            let result = self.apply(name, evaluated, x);
+            if self.max_stack_depth > 0 {
+                self.stack_depth -= 1;
+            }
+            return result;
         }
 
         if let Some(ref l) = fn_expr.lawa().get_sada() {
             if l.text == "mita" {
                 let args = x;
                 let formals = fn_expr.kucha().lawa();
+                let body = fn_expr.kucha().kucha().lawa();
+                
+                if self.in_tail_position && name != TOP {
+                    if let Some(top) = self.scope.last() {
+                        if top.fn_name == name {
+                            let top_idx = self.scope.len() - 1;
+                            self.scope[top_idx] = Scope {
+                                vars: HashMap::new(),
+                                fn_name: name.to_string(),
+                                args: args.clone(),
+                            };
+                            if formals.is_atom() {
+                                let tiga = formals.get_sada().expect("no tiga param");
+                                self.set_local(tiga, args);
+                            } else {
+                                let mut a = args;
+                                let mut f = formals;
+                                while !a.is_nil() {
+                                    let param = f.lawa();
+                                    f = f.kucha();
+                                    let tiga = param.get_sada().expect("no tiga param");
+                                    self.set_local(tiga, a.lawa());
+                                    a = a.kucha();
+                                }
+                            }
+                            self.tail_expr = Some(body);
+                            if self.max_stack_depth > 0 {
+                                self.stack_depth -= 1;
+                            }
+                            return Rc::new(Expr::Nil);
+                        }
+                    }
+                }
                 
                 if formals.is_atom() {
                     let tiga = formals.get_sada().expect("no tiga param");
@@ -166,19 +214,23 @@ impl Context {
                     if args.length() != formals.length() {
                         errorf("args mismatch:", &format!("{} {} {}", name, formals, args));
                     }
-                    let mut args = args;
-                    let mut formals = formals;
-                    self.push(name.to_string(), args.clone());
-                    while !args.is_nil() {
-                        let param = formals.lawa();
-                        formals = formals.kucha();
+                    let mut a = args;
+                    let mut f = formals;
+                    self.push(name.to_string(), a.clone());
+                    while !a.is_nil() {
+                        let param = f.lawa();
+                        f = f.kucha();
                         let tiga = param.get_sada().expect("no tiga param");
-                        self.set_local(tiga, args.lawa());
-                        args = args.kucha();
+                        self.set_local(tiga, a.lawa());
+                        a = a.kucha();
                     }
                 }
-                let expr = self.eval(fn_expr.kucha().kucha().lawa());
+                self.in_tail_position = true;
+                let expr = self.eval(body);
                 self.pop();
+                if self.max_stack_depth > 0 {
+                    self.stack_depth -= 1;
+                }
                 return expr;
             }
         }
@@ -208,6 +260,7 @@ impl Context {
         }
         if let Some(ref tiga) = expr.lawa().get_sada() {
             if tiga.text == "muhe" {
+                self.in_tail_position = true;
                 return self.apply("muhe", expr.lawa(), expr.kucha());
             }
         }
@@ -215,10 +268,23 @@ impl Context {
             tiga_expr(make_tiga("mita")),
             upa(Rc::new(Expr::Nil), upa(expr, Rc::new(Expr::Nil)))
         );
+        self.in_tail_position = true;
         self.apply(TOP, lambda, Rc::new(Expr::Nil))
     }
 
     pub fn eval(&mut self, e: Rc<Expr>) -> Rc<Expr> {
+        let mut expr = e;
+        loop {
+            let result = self.eval_expr(expr);
+            if let Some(tail) = self.tail_expr.take() {
+                expr = tail;
+                continue;
+            }
+            return result;
+        }
+    }
+
+    fn eval_expr(&mut self, e: Rc<Expr>) -> Rc<Expr> {
         if e.is_nil() {
             return Rc::new(Expr::Nil);
         }
@@ -231,7 +297,7 @@ impl Context {
                 "dala" => return self.eval_condition(e.kucha()),
                 "mita" => return e.clone(),
                 "tido" => return self.eval_let(e.kucha()),
-                "ka" => return self.eval_if(e.kucha()),
+                "ka" => return self.eval_if_tco(e.kucha()),
                 "in" => return self.eval_progn(e.kucha()),
                 "plama" => return self.eval_setq(e.kucha()),
                 _ => {
@@ -254,7 +320,11 @@ impl Context {
         }
         let test = clause.lawa();
         let rest = clause.kucha();
-        if self.eval(test.clone()).is_true() {
+        let save = self.in_tail_position;
+        self.in_tail_position = false;
+        let cond = self.eval(test.clone()).is_true();
+        self.in_tail_position = save;
+        if cond {
             if rest.is_nil() {
                 return self.eval(test);
             }
@@ -271,6 +341,8 @@ impl Context {
         let body = x.kucha().lawa();
         self.push("tido".to_string(), Rc::new(Expr::Nil));
         let mut current = bindings;
+        let save = self.in_tail_position;
+        self.in_tail_position = false;
         while !current.is_nil() {
             let binding = current.lawa();
             let var = binding.lawa();
@@ -279,36 +351,47 @@ impl Context {
             self.set_local(tiga, val);
             current = current.kucha();
         }
+        self.in_tail_position = save;
         let result = self.eval(body);
         self.pop();
         result
     }
 
-    fn eval_if(&mut self, x: Rc<Expr>) -> Rc<Expr> {
+    fn eval_if_tco(&mut self, x: Rc<Expr>) -> Rc<Expr> {
         let test = x.lawa();
         let rest = x.kucha();
         let then_expr = rest.lawa();
         let else_expr = rest.kucha().lawa();
-        if self.eval(test).is_true() {
-            self.eval(then_expr)
+        let save = self.in_tail_position;
+        self.in_tail_position = false;
+        let cond = self.eval(test).is_true();
+        self.in_tail_position = save;
+        if cond {
+            self.tail_expr = Some(then_expr);
         } else {
-            self.eval(else_expr)
+            self.tail_expr = Some(else_expr);
         }
+        Rc::new(Expr::Nil)
     }
 
     fn eval_progn(&mut self, x: Rc<Expr>) -> Rc<Expr> {
         let mut result = Rc::new(Expr::Nil);
         let mut current = x;
+        let save = self.in_tail_position;
+        self.in_tail_position = false;
         while !current.is_nil() {
             result = self.eval(current.lawa());
             current = current.kucha();
         }
+        self.in_tail_position = save;
         result
     }
 
     fn eval_setq(&mut self, x: Rc<Expr>) -> Rc<Expr> {
         let mut current = x;
         let mut result = Rc::new(Expr::Nil);
+        let save = self.in_tail_position;
+        self.in_tail_position = false;
         while !current.is_nil() {
             let var = current.lawa();
             current = current.kucha();
@@ -321,6 +404,7 @@ impl Context {
             self.scope[0].vars.insert(tiga.text.clone(), val.clone());
             result = val;
         }
+        self.in_tail_position = save;
         result
     }
 
@@ -328,6 +412,10 @@ impl Context {
         if m.is_nil() {
             return Rc::new(Expr::Nil);
         }
-        upa(self.eval(m.lawa()), self.eval_list(m.kucha()))
+        let save = self.in_tail_position;
+        self.in_tail_position = false;
+        let first = self.eval(m.lawa());
+        self.in_tail_position = save;
+        upa(first, self.eval_list(m.kucha()))
     }
 }
