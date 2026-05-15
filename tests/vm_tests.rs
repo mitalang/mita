@@ -72,6 +72,20 @@ fn test_vm_tail_call() {
 }
 
 #[test]
+fn test_vm_ffi_exec() {
+    let lib_path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/libmita_test.so");
+    
+    let code0 = format!("(mite \"{}\" \"mita_test_forty_two\")", lib_path);
+    assert_eq!(eval_vm(&code0), "42");
+
+    let code1 = format!("(mite \"{}\" \"mita_test_negate\" 5)", lib_path);
+    assert_eq!(eval_vm(&code1), "-5");
+
+    let code2 = format!("(mite \"{}\" \"mita_test_add\" 3 4)", lib_path);
+    assert_eq!(eval_vm(&code2), "7");
+}
+
+#[test]
 fn test_vm_cond() {
     assert_eq!(eval_vm("(dala ((shato 1 1) 'da) (da 'nye))"), "da");
     assert_eq!(eval_vm("(dala ((shato 1 2) 'da) (da 'nye))"), "nye");

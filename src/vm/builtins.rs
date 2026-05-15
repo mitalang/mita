@@ -15,6 +15,7 @@ pub fn register_all(vm: &mut VM) {
     vm.register_builtin("lawa", builtin_car);
     vm.register_builtin("kucha", builtin_cdr);
     vm.register_builtin("upa", builtin_cons);
+    vm.register_builtin("mite", builtin_ffi_exec);
 }
 
 fn builtin_add(_vm: &mut VM, args: &[Value]) -> Value {
@@ -92,4 +93,47 @@ fn builtin_cdr(_vm: &mut VM, args: &[Value]) -> Value {
 
 fn builtin_cons(_vm: &mut VM, args: &[Value]) -> Value {
     Value::Cons(std::rc::Rc::new((args[0].clone(), args[1].clone())))
+}
+
+fn builtin_ffi_exec(vm: &mut VM, args: &[Value]) -> Value {
+    if args.len() < 2 {
+        panic!("mite: expected at least library path and function name");
+    }
+    let lib_path = match &args[0] {
+        Value::String(s) | Value::Symbol(s) => s.as_ref(),
+        _ => panic!("mite: expected string library path, got {:?}", args[0]),
+    };
+    let func_name = match &args[1] {
+        Value::String(s) | Value::Symbol(s) => s.as_ref(),
+        _ => panic!("mite: expected string function name, got {:?}", args[1]),
+    };
+
+    let lib = vm.get_library(lib_path)
+        .unwrap_or_else(|| panic!("mite: library not found: {}", lib_path));
+
+    let result = unsafe {
+        match args.len() - 2 {
+            0 => {
+                let func: libloading::Symbol<unsafe extern "C" fn() -> i64> = lib
+                    .get(func_name.as_bytes())
+                    .unwrap_or_else(|e| panic!("mite: symbol not found '{}': {}", func_name, e));
+                func()
+            }
+            1 => {
+                let func: libloading::Symbol<unsafe extern "C" fn(i64) -> i64> = lib
+                    .get(func_name.as_bytes())
+                    .unwrap_or_else(|e| panic!("mite: symbol not found '{}': {}", func_name, e));
+                func(args[2].as_number())
+            }
+            2 => {
+                let func: libloading::Symbol<unsafe extern "C" fn(i64, i64) -> i64> = lib
+                    .get(func_name.as_bytes())
+                    .unwrap_or_else(|e| panic!("mite: symbol not found '{}': {}", func_name, e));
+                func(args[2].as_number(), args[3].as_number())
+            }
+            n => panic!("mite: unsupported argument count: {} (max 2)", n),
+        }
+    };
+
+    Value::Number(result)
 }

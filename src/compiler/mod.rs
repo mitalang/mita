@@ -429,6 +429,7 @@ impl Compiler {
             "lawa" => Some(10),
             "kucha" => Some(11),
             "upa" => Some(12),
+            "mite" => Some(13),
             _ => None,
         }
     }

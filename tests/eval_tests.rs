@@ -95,7 +95,7 @@ fn test_upa_eval() {
 #[test]
 fn test_strings() {
     let tests = vec![
-        ("\"ohla odomu!\"", "\"ohla odomu!\""),
+        ("\"ohla odomu!\"", "ohla odomu!"),
     ];
 
     for (in_str, out) in tests {

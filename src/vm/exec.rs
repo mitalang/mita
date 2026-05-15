@@ -9,6 +9,7 @@ pub struct VM {
     frames: Vec<CallFrame>,
     globals: HashMap<String, Value>,
     builtins: Vec<fn(&mut VM, &[Value]) -> Value>,
+    libraries: HashMap<String, libloading::Library>,
 }
 
 struct CallFrame {
@@ -26,7 +27,22 @@ impl VM {
             frames: Vec::new(),
             globals: HashMap::new(),
             builtins: Vec::new(),
+            libraries: HashMap::new(),
         }
+    }
+
+    pub fn get_library(&mut self, path: &str) -> Option<&libloading::Library> {
+        if !self.libraries.contains_key(path) {
+            match unsafe { libloading::Library::new(path) } {
+                Ok(lib) => {
+                    self.libraries.insert(path.to_string(), lib);
+                }
+                Err(e) => {
+                    panic!("mite: failed to load library '{}': {}", path, e);
+                }
+            }
+        }
+        self.libraries.get(path)
     }
 
     pub fn register_builtin(&mut self, name: &str, f: fn(&mut VM, &[Value]) -> Value) {

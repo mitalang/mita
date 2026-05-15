@@ -186,27 +186,27 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn string_token(&mut self, r: char) -> Token {
+    fn string_token(&mut self, _r: char) -> Token {
         self.buf.clear();
-        self.buf.push(r);
 
-        let mut r = r;
+        let mut r = self.read();
         while r != EOFRUNE {
-            r = self.read();
             match r {
                 '\\' => {
                     r = self.read();
                     if r == EOFRUNE {
                         break;
                     }
+                    self.buf.push(r);
                 }
                 '"' => {
-                    self.buf.push(r);
                     return make_token(TokenType::String, &self.buf);
                 }
-                _ => {}
+                _ => {
+                    self.buf.push(r);
+                }
             }
-            self.buf.push(r);
+            r = self.read();
         }
         lex_error("unexpected end of string for {}", &self.buf);
     }
