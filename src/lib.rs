@@ -3,6 +3,8 @@ pub mod expr;
 pub mod parser;
 pub mod eval;
 pub mod elementary;
+pub mod vm;
+pub mod compiler;
 
 pub use token::{Token, TokenType, EOFRUNE};
 pub use expr::Expr;
