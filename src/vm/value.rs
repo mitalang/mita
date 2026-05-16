@@ -28,6 +28,7 @@ pub struct FuncObject {
     pub num_params: u8,
     pub num_locals: u8,
     pub used_regs: u8,
+    pub variadic: bool,
 }
 
 impl Value {

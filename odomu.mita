@@ -87,4 +87,81 @@
       (da (dala ((shato lst (upa (lawa lst) (kucha lst)))
                  (tomo (pupu (lawa lst)) (pupu (kucha lst))))
         (upa lst '()))))))
+
+  ; ===== Network / Web Functions =====
+  ; net library path helper
+  (mita_net_lib (mita () "libmita_net.so"))
+
+  ; net_listen: create socket and listen on port, returns fd
+  (net_listen (mita (port)
+    (mite (mita_net_lib) "mita_net_listen" port)))
+
+  ; net_accept: accept connection, returns client fd
+  (net_accept (mita (listen_fd)
+    (mite (mita_net_lib) "mita_net_accept" listen_fd)))
+
+  ; net_read: read data from socket into buffer, returns bytes read
+  (net_read (mita (fd)
+    (mite (mita_net_lib) "mita_net_read" fd)))
+
+  ; net_get_buffer: get the buffer content as string
+  (net_get_buffer (mita ()
+    (mite_str (mita_net_lib) "mita_net_get_buffer")))
+
+  ; net_write: write string data to socket, returns bytes written
+  (net_write (mita (fd data)
+    (mite (mita_net_lib) "mita_net_write" fd data)))
+
+  ; net_close: close socket
+  (net_close (mita (fd)
+    (mite (mita_net_lib) "mita_net_close" fd)))
+
+  ; http_parse_path: extract path from HTTP request
+  (http_parse_path (mita (request)
+    (mite_str (mita_net_lib) "mita_http_parse_path" request)))
+
+  ; http_ok: generate HTTP 200 response
+  (http_ok (mita (body)
+    (mite_str (mita_net_lib) "mita_http_ok_response" body)))
+
+  ; http_not_found: generate HTTP 404 response
+  (http_not_found (mita (body)
+    (mite_str (mita_net_lib) "mita_http_not_found_response" body)))
+
+  ; handle_request: default request handler
+  ; Takes (path request_body) and returns response body
+  (handle_request (mita args
+    (dala ((shato (lawa args) "/") "<h1>Hello from MITA!</h1><p>Welcome to the Hilichurl web server.</p>")
+      (da "<h1>404 Not Found</h1><p>The page you requested does not exist.</p>"))))
+
+  ; serve_once: accept one connection and handle it
+  (serve_once (mita (listen_fd handler)
+    (tido ((client_fd (net_accept listen_fd)))
+      (dala ((aba client_fd 0) nye)
+        (da (in
+          (net_read client_fd)
+          (net_write client_fd
+            (http_ok
+              (handler
+                (http_parse_path (net_get_buffer))
+                (net_get_buffer))))
+          (net_close client_fd)
+          da))))))
+
+  ; serve: main server loop
+  (serve (mita (listen_fd handler)
+    (in
+      (serve_once listen_fd handler)
+      (serve listen_fd handler))))
+
+  ; run_server: start server on port with handler
+  (run_server (mita (port handler)
+    (tido ((fd (net_listen port)))
+      (dala ((aba fd 0) nye)
+        (da (in
+          (serve fd handler)
+          nye))
+      (da (in
+        (print (sada "Failed to start server on port" port))
+        nye))))))
 ))

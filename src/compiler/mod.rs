@@ -24,6 +24,7 @@ impl Compiler {
                 num_params: 0,
                 num_locals: 0,
                 used_regs: 0,
+                variadic: false,
             },
             locals: HashMap::new(),
             next_reg: X10,
@@ -51,8 +52,15 @@ impl Compiler {
             compiler.emit_ret(result_reg);
         }
 
+        // Ensure toplevel always ends with RET
         if compiler.func.bytecode.is_empty() {
             compiler.emit_ret(X0);
+        } else {
+            let last_inst = compiler.func.bytecode.last().unwrap();
+            let op = decode_op(*last_inst);
+            if op != OP_RET {
+                compiler.emit_ret(X0);
+            }
         }
         compiler.resolve_labels();
         (compiler.func, globals)
@@ -73,7 +81,7 @@ impl Compiler {
                 upvalues: Vec::new(),
             })));
 
-            let target_reg = compiler.alloc_reg();
+            let target_reg = X3;
             compiler.emit_li(target_reg, idx as u32);
             compiler.locals.insert(name.clone(), target_reg);
 
@@ -95,6 +103,7 @@ impl Compiler {
             let tok = formals.get_sada().expect("lambda: expected param");
             compiler.emit_mv(X18, X10);
             compiler.locals.insert(tok.text.clone(), X18);
+            compiler.func.variadic = true;
             1
         } else {
             let mut count = 0;
@@ -430,6 +439,8 @@ impl Compiler {
             "kucha" => Some(11),
             "upa" => Some(12),
             "mite" => Some(13),
+            "mite_str" => Some(14),
+            "print" => Some(15),
             _ => None,
         }
     }

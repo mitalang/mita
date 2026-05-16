@@ -114,7 +114,7 @@ Syntax: `(mite "libpath.so" "func_name" arg1 arg2)`
 - Example: `(mite "libm.so" "pow" 2 3)` → `8`
 
 ## VM ARCHITECTURE
-- **Register file**: 32 registers (X0=zero, X3=temp, X10-X17=arg regs, X18+=saved/local regs)
+- **Register file**: 64 registers (X0=zero, X3=temp, X10-X17=arg regs, X18+=saved/local regs)
 - **Instruction set**: RISC-V style encoding (op[31:24], rd[23:18], rs1[17:12], rs2[11:6], funct3[5:0])
 - **Opcodes**: MV, LI, ADD, SUB, MUL, DIV, REM, ADDI, SEQ, SNE, SLT, SGT, SLE, SGE, CONS, CAR, CDR, LW, SW, BEQ, BNE, BLT, BGE, JAL, J, CALL, TAIL, RET, BUILTIN, SETGLOBAL
 - **Calling convention**: Args in X10+, result in caller-specified rd, saved regs X18+ restored on return
@@ -152,6 +152,21 @@ All library functions now use Hilichurlian (丘丘语) names:
 | remove | `kundala` | remove |
 | flatten | `pupu` | flatten |
 
+## NETWORKING & WEB SERVER (NEW)
+- **C FFI network library**: `src/ffi_mita_net.c` → `libmita_net.so` with TCP/HTTP primitives
+- **Network builtins** (odomu.mita): `net_listen`, `net_accept`, `net_read`, `net_get_buffer`, `net_write`, `net_close`, `http_parse_path`, `http_ok`, `http_not_found`
+- **Server functions** (odomu.mita): `serve_once`, `serve`, `run_server`
+- **Web server examples**: `examples/web_server.mita`, `web_server_test.mita`, `web_server_test2.mita`
+- **VM `print` builtin**: index 15, prints values to stdout
+
+## RECENT FIXES
+- **OP_TAIL inline rewrite**: Builtin branch pops only current frame, restores saved_regs, continues at return_pc (fixes toplevel sequencing)
+- **Variadic lambdas**: VM `enter_closure` builds cons list from X10..X10+argc-1 when `FuncObject.variadic=true`
+- **Register file expanded**: 32 → 64 registers to support complex odomu.mita functions
+- **`enter_closure` register clearing removed**: No longer clobbers caller registers (was causing nil args)
+- **`serve_once` simplified**: Reduced nested `tido` bindings to avoid register exhaustion
+- **String lexer fixed**: quotes no longer included in `Token.text` for `TokenType::String`
+
 ## NOTES
 - ~~Self-hosted `riscv-builders` runner used in CI (non-standard)~~ → Now uses `ubuntu-latest`
 - `odomu.mita` uses Hilichurlian names for all library functions (not English)
@@ -161,4 +176,3 @@ All library functions now use Hilichurlian (丘丘语) names:
 - `kuzi`/`todo` are variadic via `mita args` pattern (single atom formal captures entire arg list)
 - `ELEMENTARY` uses `std::sync::OnceLock` (no unsafe code)
 - VM uses `libloading` (unsafe required for `Library::new` and `Symbol::get`)
-- String lexer fixed: quotes no longer included in `Token.text` for `TokenType::String`

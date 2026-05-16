@@ -4,7 +4,7 @@ use crate::vm::value::{Value, Closure};
 use crate::vm::isa::*;
 
 pub struct VM {
-    regs: [Value; 32],
+    regs: [Value; 64],
     stack: Vec<Value>,
     frames: Vec<CallFrame>,
     globals: HashMap<String, Value>,
@@ -230,7 +230,7 @@ impl VM {
                     let func_val = self.reg(func_reg).clone();
                     match func_val {
                         Value::Closure(closure) => {
-                            self.enter_closure(closure, pc, rd);
+                            self.enter_closure(closure, pc, rd, argc);
                             pc = 0;
                         }
                         Value::Builtin(idx) => {
@@ -245,7 +245,7 @@ impl VM {
                             if let Some(global) = self.globals.get(&*name).cloned() {
                                 match global {
                                     Value::Closure(closure) => {
-                                        self.enter_closure(closure, pc, rd);
+                                        self.enter_closure(closure, pc, rd, argc);
                                         pc = 0;
                                     }
                                     Value::Builtin(idx) => {
@@ -268,10 +268,67 @@ impl VM {
                 OP_TAIL => {
                     let func_reg = decode_rs1(inst);
                     let argc = decode_funct3(inst) as usize;
-                    if let Some(val) = self.tail_call(func_reg, argc) {
-                        return val;
+                    let func_val = self.reg(func_reg).clone();
+                    let current_frame = self.frames.pop().unwrap();
+
+                    match func_val {
+                        Value::Closure(closure) => {
+                            self.enter_closure(closure, current_frame.return_pc, current_frame.result_reg, argc);
+                            pc = 0;
+                        }
+                        Value::Builtin(idx) => {
+                            let mut args = Vec::with_capacity(argc);
+                            for i in 0..argc {
+                                args.push(self.regs[X10 as usize + i].clone());
+                            }
+                            let result = (self.builtins[idx as usize])(self, &args);
+
+                            for (idx, saved) in current_frame.saved_regs.iter().enumerate() {
+                                self.regs[8 + idx] = saved.clone();
+                            }
+
+                            self.set_reg(current_frame.result_reg, result.clone());
+
+                            if self.frames.is_empty() {
+                                return result;
+                            }
+
+                            pc = current_frame.return_pc;
+                        }
+                        Value::Symbol(name) => {
+                            if let Some(global) = self.globals.get(&*name).cloned() {
+                                match global {
+                                    Value::Closure(closure) => {
+                                        self.enter_closure(closure, current_frame.return_pc, current_frame.result_reg, argc);
+                                        pc = 0;
+                                    }
+                                    Value::Builtin(idx) => {
+                                        let mut args = Vec::with_capacity(argc);
+                                        for i in 0..argc {
+                                            args.push(self.regs[X10 as usize + i].clone());
+                                        }
+                                        let result = (self.builtins[idx as usize])(self, &args);
+
+                                        for (idx, saved) in current_frame.saved_regs.iter().enumerate() {
+                                            self.regs[8 + idx] = saved.clone();
+                                        }
+
+                                        self.set_reg(current_frame.result_reg, result.clone());
+
+                                        if self.frames.is_empty() {
+                                            return result;
+                                        }
+
+                                        pc = current_frame.return_pc;
+                                    }
+                                    _ => panic!("tail call: global is not a function: {:?}", global),
+                                }
+                            } else {
+                                panic!("tail call: undefined function: {}", name);
+                            }
+                        }
+                        _ => panic!("tail call: expected function, got {:?}", func_val),
                     }
-                    pc = 0;
                 }
                 OP_RET => {
                     let val = self.reg(decode_rs1(inst)).clone();
@@ -325,7 +382,15 @@ impl VM {
         }
     }
 
-    fn enter_closure(&mut self, closure: Rc<Closure>, return_pc: usize, result_reg: u8) {
+    fn enter_closure(&mut self, closure: Rc<Closure>, return_pc: usize, result_reg: u8, argc: usize) {
+        if closure.func.variadic {
+            let mut list = Value::Nil;
+            for i in (0..argc).rev() {
+                list = Value::Cons(Rc::new((self.regs[X10 as usize + i].clone(), list)));
+            }
+            self.regs[X10 as usize] = list;
+        }
+
         let used_regs = closure.func.used_regs;
         let num_s_regs = used_regs.saturating_sub(8).min(20) as usize;
         let mut saved = Vec::with_capacity(num_s_regs);
@@ -339,89 +404,9 @@ impl VM {
             saved_regs: saved,
             result_reg,
         });
-
-        for i in (used_regs as usize)..32 {
-            self.regs[i] = Value::Nil;
-        }
     }
 
-    fn tail_call(&mut self, func_reg: u8, argc: usize) -> Option<Value> {
-        let func_val = self.reg(func_reg).clone();
-        let current_frame = self.frames.pop().unwrap();
-
-        match func_val {
-            Value::Closure(closure) => {
-                self.enter_closure(closure, current_frame.return_pc, current_frame.result_reg);
-                None
-            }
-            Value::Builtin(idx) => {
-                let mut args = Vec::with_capacity(argc);
-                for i in 0..argc {
-                    args.push(self.regs[X10 as usize + i].clone());
-                }
-                let result = (self.builtins[idx as usize])(self, &args);
-
-                for (idx, saved) in current_frame.saved_regs.iter().enumerate() {
-                    self.regs[8 + idx] = saved.clone();
-                }
-
-                self.set_reg(X10, result);
-
-                if self.frames.is_empty() {
-                    return Some(self.reg(X10).clone());
-                }
-                let frame = self.frames.pop().unwrap();
-                for (idx, saved) in frame.saved_regs.iter().enumerate() {
-                    self.regs[8 + idx] = saved.clone();
-                }
-                if self.frames.is_empty() {
-                    Some(self.reg(X10).clone())
-                } else {
-                    None
-                }
-            }
-            Value::Symbol(name) => {
-                if let Some(global) = self.globals.get(&*name).cloned() {
-                    match global {
-                        Value::Closure(closure) => {
-                            self.enter_closure(closure, current_frame.return_pc, current_frame.result_reg);
-                            None
-                        }
-                        Value::Builtin(idx) => {
-                            let mut args = Vec::with_capacity(argc);
-                            for i in 0..argc {
-                                args.push(self.regs[X10 as usize + i].clone());
-                            }
-                            let result = (self.builtins[idx as usize])(self, &args);
-                            self.set_reg(X10, result);
-
-                            for (idx, saved) in current_frame.saved_regs.iter().enumerate() {
-                                self.regs[8 + idx] = saved.clone();
-                            }
-
-                            if self.frames.is_empty() {
-                                return Some(self.reg(X10).clone());
-                            }
-                            let frame = self.frames.pop().unwrap();
-                            for (idx, saved) in frame.saved_regs.iter().enumerate() {
-                                self.regs[8 + idx] = saved.clone();
-                            }
-                            if self.frames.is_empty() {
-                                Some(self.reg(X10).clone())
-                            } else {
-                                None
-                            }
-                        }
-                        _ => panic!("tail call: global is not a function: {:?}", global),
-                    }
-                } else {
-                    panic!("tail call: undefined function: {}", name);
-                }
-            }
-            _ => panic!("tail call: expected function, got {:?}", func_val),
-        }
     }
-}
 
 fn values_equal(a: &Value, b: &Value) -> bool {
     use Value::*;
