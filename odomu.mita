@@ -209,4 +209,43 @@
     (tido ((a x))
       (tido ((result y))
         (in z result)))))
+
+  ; ===== Network Primitives =====
+  ; Low-level socket builtins (thin wrappers around sys_*)
+
+  ; net_listen: create socket and listen on host:port, returns fd
+  (net_listen (mita args
+    (dala ((shato (kucha args) nya)
+      (sys_listen (lawa args)))
+      (da (sys_listen (lawakucha args) (lawa args))))))
+
+  ; net_accept: accept connection, returns client fd
+  (net_accept (mita (listen_fd)
+    (sys_accept listen_fd)))
+
+  ; net_read: read data from socket, returns string
+  (net_read (mita (fd)
+    (sys_read fd)))
+
+  ; net_write: write string data to socket, returns bytes written
+  (net_write (mita (fd data)
+    (sys_write fd data)))
+
+  ; net_close: close socket
+  (net_close (mita (fd)
+    (sys_close fd)))
+
+  ; serve_once: accept one connection and handle it
+  (serve_once (mita (listen_fd handler)
+    (tido ((client_fd (net_accept listen_fd)))
+      (dala ((aba client_fd 0) nye)
+        (da (in
+          (net_read client_fd)
+          (net_write client_fd
+            (http_ok
+              (handler
+                (http_parse_path (net_get_buffer))
+                (net_get_buffer))))
+          (net_close client_fd)
+          da))))))
 ))
