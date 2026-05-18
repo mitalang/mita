@@ -1,0 +1,39 @@
+; http.mita — MITA HTTP Server Library (minimal)
+
+(muhe (
+  (http_ok (mita (body)
+    (sys_http_response 200 body "text/html; charset=utf-8")))
+
+  (http_not_found (mita (body)
+    (sys_http_response 404 body "text/html; charset=utf-8")))
+
+  (url_decode (mita (s) (sys_url_decode s)))
+
+  (handle_connection (mita (listen_fd handler)
+    (tido ((client_fd (sys_accept listen_fd)))
+      (dala ((aba client_fd 0) nye)
+        (da (in
+          (tido ((raw (sys_read_http client_fd)))
+            (tido ((parsed (sys_http_parse_request raw)))
+              (in
+                (print (sys_string_concat (sada (lawa parsed) " " (lawakucha parsed))))
+                (sys_write client_fd (handler parsed)))))
+          (sys_close client_fd)
+          da))))))
+
+  (serve_loop (mita (listen_fd handler)
+    (in
+      (handle_connection listen_fd handler)
+      (serve_loop listen_fd handler))))
+
+  (run_server (mita (host port handler)
+    (tido ((fd (sys_listen port host)))
+      (dala ((aba fd 0) nye)
+        (da (in
+          (print (sys_string_concat (sada "Server listening on " host ":" port)))
+          (serve_loop fd handler)
+          nye))
+        (da (in
+          (print (sys_string_concat (sada "Failed to bind " host ":" port)))
+          nye))))))
+))

@@ -27,13 +27,13 @@ https://github.com/mitalang/mita/releases/
 
 #### Install from Source
 ```bash
-go install github.com/mitalang/mita/cmd/mita@latest
-~/go/bin/mita
+cargo install --path .
+mita
 ```
 
 You can load library like
 ```bash
-~/go/bin/mita odomu.mita
+mita odomu.mita
 ```
 
 ### Specification
@@ -59,7 +59,34 @@ sada
 * `aba` less than (`<`)
 * `unta` greater than (`>`)
 * `abashato` less than and equal (`<=`)
-* `untashato` greater than and equal (`>=`)
+ * `untashato` greater than and equal (`>=`)
+ * `plata` quote
+ * `tido` let (local binding)
+ * `ka` if (conditional)
+ * `in` progn (sequential evaluation)
+ * `plama` setq (variable assignment)
+
+### Library functions (odomu.mita)
+
+* `lawakucha` cadr (car of cdr)
+* `lawakuchakucha` caddr (car of cdr of cdr)
+* `kuchakucha` cddr (cdr of cdr)
+* `sada` list constructor
+* `tiga` list length
+* `si` map
+* `valo` filter
+* `mosi` reduce
+* `tomo` append
+* `domu` reverse
+* `mito` assoc
+* `odomu` member
+* `zido` last element
+* `eleka` nth element
+* `kuzi` logical and
+* `todo` logical or
+* `biat` logical not
+* `kundala` remove element
+* `pupu` flatten list
 
 ### Pre-defined variables
 

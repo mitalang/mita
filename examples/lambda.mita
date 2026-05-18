@@ -1,0 +1,3 @@
+; lambda 匿名函数示例
+; 使用 tido (let) 绑定匿名函数并调用
+(tido ((add1 (mita (x) (celi x unu)))) (add1 du)) ; => 3

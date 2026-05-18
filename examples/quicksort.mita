@@ -1,0 +1,29 @@
+; 快速排序 (Quicksort)
+; 自包含实现，定义了 tomo/append
+(muhe
+  ((tomo (mita (a b)
+    (dala ((shato a nya) b)
+      (da (upa (lawa a) (tomo (kucha a) b))))))
+   (filterless (mita (p lst)
+     (ka (shato lst nya)
+         '()
+         (ka (aba (lawa lst) p)
+             (upa (lawa lst) (filterless p (kucha lst)))
+             (filterless p (kucha lst))))))
+   (filtergreater (mita (p lst)
+     (ka (shato lst nya)
+         '()
+         (ka (unta (lawa lst) p)
+             (upa (lawa lst) (filtergreater p (kucha lst)))
+             (filtergreater p (kucha lst))))))
+   (qsort (mita (lst)
+     (ka (shato lst nya)
+         '()
+         (tido ((p (lawa lst))
+                (r (kucha lst)))
+           (tomo
+             (qsort (filterless p r))
+             (upa p (qsort (filtergreater p r))))))))))
+
+; 测试
+(qsort '(4 3 1 2 5))

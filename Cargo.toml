@@ -1,0 +1,19 @@
+[package]
+name = "mita"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libloading = "0.8"
+
+[lib]
+name = "mita"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mita"
+path = "src/main.rs"
+
+[[bin]]
+name = "dump_toplevel"
+path = "/tmp/dump_toplevel.rs"

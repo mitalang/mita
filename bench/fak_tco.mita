@@ -1,0 +1,9 @@
+; tail-recursive factorial benchmark
+(muhe
+  ((fak_tco (mita (n acc)
+    (ka (shato n unu)
+        acc
+        (fak_tco (movo n unu) (celida n acc)))))))
+
+; compute 10000! - test for stack overflow
+(fak_tco 100000 1)
