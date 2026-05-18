@@ -91,28 +91,122 @@
                  (tomo (pupu (lawa lst)) (pupu (kucha lst))))
         (upa lst '()))))))
 
-  ; ===== Network Primitives =====
-  ; Low-level socket builtins (thin wrappers around sys_*)
+  ; NEW: null predicate
+  (null (mita (x) (shato x nya)))
 
-  ; net_listen: create socket and listen on host:port, returns fd
-  (net_listen (mita args
-    (dala ((shato (kucha args) nya)
-      (sys_listen (lawa args)))
-      (da (sys_listen (lawakucha args) (lawa args))))))
+  ; NEW: consp predicate (checks if x is a cons cell)
+  (consp (mita (x)
+    (dala ((shato x nya) nye)
+      (da (dala ((shato x '()) nye)
+        (da (dala ((shato x nil) nye)
+          (da da))))))))
 
-  ; net_accept: accept connection, returns client fd
-  (net_accept (mita (listen_fd)
-    (sys_accept listen_fd)))
+  ; NEW: atom predicate (opposite of consp)
+  (atom (mita (x) (biat (consp x))))
 
-  ; net_read: read data from socket, returns string
-  (net_read (mita (fd)
-    (sys_read fd)))
+  ; NEW: listp predicate (true if x is nil or cons)
+  (listp (mita (x) (todo (null x) (consp x))))
 
-  ; net_write: write string data to socket, returns bytes written
-  (net_write (mita (fd data)
-    (sys_write fd data)))
+  ; NEW: find - returns element if found, else nye
+  (find (mita (x lst)
+    (dala ((shato lst nya) nye)
+      (da (dala ((shato x (lawa lst)) (lawa lst))
+        (find x (kucha lst)))))))
 
-  ; net_close: close socket
-  (net_close (mita (fd)
-    (sys_close fd)))
+  ; NEW: position - returns index of element, or nye if not found
+  (position (mita (x lst)
+    (dala ((shato lst nya) nye)
+      (da (dala ((shato x (lawa lst)) 0)
+        (da (tido ((p (position x (kucha lst))))
+          (dala ((shato p nye) nye)
+            (da (celi p unu))))))))))
+
+  ; NEW: count - counts occurrences of x in lst
+  (count (mita (x lst)
+    (dala ((shato lst nya) 0)
+      (da (dala ((shato x (lawa lst)) (celi unu (count x (kucha lst))))
+        (count x (kucha lst)))))))
+
+  ; NEW: copy_list - creates a copy of the list
+  (copy_list (mita (lst)
+    (dala ((shato lst nya) '())
+      (da (upa (lawa lst) (copy_list (kucha lst)))))))
+
+  ; NEW: subseq - returns sublist from start to end
+  (subseq (mita (lst start end)
+    (dala ((shato start 0) (dala ((shato end 0) '()) (da (subseq lst start (tiga lst)))))
+      (da (dala ((shato start 0) '())
+        (da (upa (lawa lst) (subseq (kucha lst) (movo start unu) (movo end unu)))))))))
+
+  ; NEW: adjoin - adds element to list if not already present
+  (adjoin (mita (x lst)
+    (dala ((odomu x lst) lst)
+      (da (upa x lst)))))
+
+  ; NEW: union - returns union of two lists
+  (union (mita (a b)
+    (dala ((shato a nya) b)
+      (da (tido ((x (lawa a))
+                 (rest (union (kucha a) b)))
+        (dala ((odomu x rest) rest)
+          (da (upa x rest))))))))
+
+  ; NEW: intersection - returns intersection of two lists (without tido)
+  (intersection (mita (a b)
+    (dala ((shato a nya) '())
+      (da (dala ((odomu (lawa a) b)
+        (upa (lawa a) (intersection (kucha a) b)))
+        (intersection (kucha a) b))))))
+
+  ; NEW: set_difference - returns elements in a not in b (without tido)
+  (set_difference (mita (a b)
+    (dala ((shato a nya) '())
+      (da (dala ((odomu (lawa a) b)
+        (set_difference (kucha a) b))
+        (upa (lawa a) (set_difference (kucha a) b)))))))
+
+  ; NEW: subst - substitutes old with new in tree
+  (subst (mita (new old tree)
+    (dala ((shato tree old) new)
+      (da (dala ((consp tree)
+        (upa (subst new old (lawa tree))
+             (subst new old (kucha tree))))
+        (da tree))))))
+
+  ; NEW: every - tests if all elements satisfy predicate
+  (every (mita (pred lst)
+    (dala ((shato lst nya) da)
+      (da (dala ((pred (lawa lst)) (every pred (kucha lst)))
+        nye)))))
+
+  ; NEW: some - tests if any element satisfies predicate
+  (some (mita (pred lst)
+    (dala ((shato lst nya) nye)
+      (da (dala ((pred (lawa lst)) da)
+        (some pred (kucha lst)))))))
+
+  ; NEW: eq - equality predicate
+  (eq (mita (a b) (shato a b)))
+
+  ; NEW: eql - equality predicate (same as eq for now)
+  (eql (mita (a b) (shato a b)))
+
+  ; NEW: when - conditional execution
+  (when (mita (cond body)
+    (dala (cond body nye))))
+
+  ; NEW: unless - conditional execution (opposite of when)
+  (unless (mita (cond body)
+    (dala ((biat cond) body nye))))
+
+  ; NEW: prog1 - evaluates first form, returns its value
+  (prog1 (mita (x y)
+    (tido ((result x))
+      (in y result))))
+
+  ; NEW: prog2 - evaluates second form, returns its value
+  (prog2 (mita (x y z)
+    (tido ((a x))
+      (tido ((result y))
+        (in z result)))))
 ))

@@ -40,6 +40,26 @@ pub fn register_all(vm: &mut VM) {
     vm.register_builtin("sys_string_split", builtin_string_split);
     vm.register_builtin("sys_string_replace", builtin_string_replace);
     vm.register_builtin("sys_string_trim", builtin_string_trim);
+    vm.register_builtin("mod", builtin_mod);
+    vm.register_builtin("abs", builtin_abs);
+    vm.register_builtin("max", builtin_max);
+    vm.register_builtin("min", builtin_min);
+    vm.register_builtin("floor", builtin_floor);
+    vm.register_builtin("ceiling", builtin_ceiling);
+    vm.register_builtin("truncate", builtin_truncate);
+    vm.register_builtin("round", builtin_round);
+    vm.register_builtin("expt", builtin_expt);
+    vm.register_builtin("random", builtin_random);
+    vm.register_builtin("sqrt", builtin_sqrt);
+    vm.register_builtin("zerop", builtin_zerop);
+    vm.register_builtin("plusp", builtin_plusp);
+    vm.register_builtin("minusp", builtin_minusp);
+    vm.register_builtin("evenp", builtin_evenp);
+    vm.register_builtin("oddp", builtin_oddp);
+    vm.register_builtin("numberp", builtin_numberp);
+    vm.register_builtin("consp", builtin_consp);
+    vm.register_builtin("atom", builtin_atom);
+    vm.register_builtin("null", builtin_null);
 }
 
 fn builtin_string_find(_vm: &mut VM, args: &[Value]) -> Value {
@@ -720,4 +740,103 @@ fn builtin_sys_read_http(vm: &mut VM, args: &[Value]) -> Value {
         }
         _ => panic!("sys_read_http: fd {} is not a stream", fd),
     }
+}
+
+fn builtin_mod(_vm: &mut VM, args: &[Value]) -> Value {
+    let a = args[0].as_number();
+    let b = args[1].as_number();
+    if b == 0 {
+        panic!("mod: division by zero");
+    }
+    Value::Number(a % b)
+}
+
+fn builtin_abs(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Number(args[0].as_number().abs())
+}
+
+fn builtin_max(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Number(args[0].as_number().max(args[1].as_number()))
+}
+
+fn builtin_min(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Number(args[0].as_number().min(args[1].as_number()))
+}
+
+fn builtin_floor(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Number(args[0].as_number())
+}
+
+fn builtin_ceiling(_vm: &mut VM, args: &[Value]) -> Value {
+    let n = args[0].as_number() as f64;
+    Value::Number(n.ceil() as i64)
+}
+
+fn builtin_truncate(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Number(args[0].as_number())
+}
+
+fn builtin_round(_vm: &mut VM, args: &[Value]) -> Value {
+    let n = args[0].as_number() as f64;
+    Value::Number(n.round() as i64)
+}
+
+fn builtin_expt(_vm: &mut VM, args: &[Value]) -> Value {
+    let base = args[0].as_number() as f64;
+    let exp = args[1].as_number() as f64;
+    Value::Number(base.powf(exp) as i64)
+}
+
+fn builtin_sqrt(_vm: &mut VM, args: &[Value]) -> Value {
+    let n = args[0].as_number() as f64;
+    Value::Number(n.sqrt() as i64)
+}
+
+fn builtin_random(_vm: &mut VM, args: &[Value]) -> Value {
+    let limit = args[0].as_number() as i64;
+    if limit <= 0 {
+        return Value::Number(0);
+    }
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as u64;
+    Value::Number(((seed % limit as u64) as i64).abs())
+}
+
+fn builtin_zerop(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(args[0].as_number() == 0)
+}
+
+fn builtin_plusp(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(args[0].as_number() > 0)
+}
+
+fn builtin_minusp(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(args[0].as_number() < 0)
+}
+
+fn builtin_evenp(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(args[0].as_number() % 2 == 0)
+}
+
+fn builtin_oddp(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(args[0].as_number() % 2 != 0)
+}
+
+fn builtin_numberp(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(matches!(args[0], Value::Number(_)))
+}
+
+fn builtin_consp(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(matches!(args[0], Value::Cons(_)))
+}
+
+fn builtin_atom(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(!matches!(args[0], Value::Cons(_)))
+}
+
+fn builtin_null(_vm: &mut VM, args: &[Value]) -> Value {
+    Value::Bool(args[0].is_nil())
 }
