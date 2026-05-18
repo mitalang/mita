@@ -3,6 +3,11 @@ use std::rc::Rc;
 use crate::vm::value::{Value, Closure};
 use crate::vm::isa::*;
 
+pub enum Socket {
+    Listener(std::net::TcpListener),
+    Stream(std::net::TcpStream),
+}
+
 pub struct VM {
     regs: [Value; 64],
     stack: Vec<Value>,
@@ -10,6 +15,9 @@ pub struct VM {
     globals: HashMap<String, Value>,
     builtins: Vec<fn(&mut VM, &[Value]) -> Value>,
     libraries: HashMap<String, libloading::Library>,
+    pub sockets: HashMap<i64, Socket>,
+    next_fd: i64,
+    pub script_args: Vec<String>,
 }
 
 struct CallFrame {
@@ -28,7 +36,16 @@ impl VM {
             globals: HashMap::new(),
             builtins: Vec::new(),
             libraries: HashMap::new(),
+            sockets: HashMap::new(),
+            next_fd: 3,
+            script_args: Vec::new(),
         }
+    }
+
+    pub fn alloc_fd(&mut self) -> i64 {
+        let fd = self.next_fd;
+        self.next_fd += 1;
+        fd
     }
 
     pub fn get_library(&mut self, path: &str) -> Option<&libloading::Library> {
@@ -269,11 +286,25 @@ impl VM {
                     let func_reg = decode_rs1(inst);
                     let argc = decode_funct3(inst) as usize;
                     let func_val = self.reg(func_reg).clone();
-                    let current_frame = self.frames.pop().unwrap();
+                    let current_frame = self.frames.last().unwrap();
+                    let return_pc = current_frame.return_pc;
+                    let result_reg = current_frame.result_reg;
+                    let saved_regs = current_frame.saved_regs.clone();
 
                     match func_val {
                         Value::Closure(closure) => {
-                            self.enter_closure(closure, current_frame.return_pc, current_frame.result_reg, argc);
+                            if closure.func.variadic {
+                                let mut list = Value::Nil;
+                                for i in (0..argc).rev() {
+                                    list = Value::Cons(Rc::new((self.regs[X10 as usize + i].clone(), list)));
+                                }
+                                self.regs[X10 as usize] = list;
+                            }
+                            let frame = self.frames.last_mut().unwrap();
+                            frame.closure = closure;
+                            frame.return_pc = return_pc;
+                            frame.result_reg = result_reg;
+                            frame.saved_regs = saved_regs;
                             pc = 0;
                         }
                         Value::Builtin(idx) => {
@@ -283,23 +314,39 @@ impl VM {
                             }
                             let result = (self.builtins[idx as usize])(self, &args);
 
-                            for (idx, saved) in current_frame.saved_regs.iter().enumerate() {
+                            // Pop current frame before restoring to caller's frame
+                            self.frames.pop();
+
+                            for (idx, saved) in saved_regs.iter().enumerate() {
                                 self.regs[8 + idx] = saved.clone();
                             }
 
-                            self.set_reg(current_frame.result_reg, result.clone());
+                            if !self.frames.is_empty() {
+                                self.set_reg(result_reg, result.clone());
+                            }
 
                             if self.frames.is_empty() {
                                 return result;
                             }
 
-                            pc = current_frame.return_pc;
+                            pc = return_pc;
                         }
                         Value::Symbol(name) => {
                             if let Some(global) = self.globals.get(&*name).cloned() {
                                 match global {
                                     Value::Closure(closure) => {
-                                        self.enter_closure(closure, current_frame.return_pc, current_frame.result_reg, argc);
+                                        if closure.func.variadic {
+                                            let mut list = Value::Nil;
+                                            for i in (0..argc).rev() {
+                                                list = Value::Cons(Rc::new((self.regs[X10 as usize + i].clone(), list)));
+                                            }
+                                            self.regs[X10 as usize] = list;
+                                        }
+                                        let frame = self.frames.last_mut().unwrap();
+                                        frame.closure = closure;
+                                        frame.return_pc = return_pc;
+                                        frame.result_reg = result_reg;
+                                        frame.saved_regs = saved_regs;
                                         pc = 0;
                                     }
                                     Value::Builtin(idx) => {
@@ -309,17 +356,19 @@ impl VM {
                                         }
                                         let result = (self.builtins[idx as usize])(self, &args);
 
-                                        for (idx, saved) in current_frame.saved_regs.iter().enumerate() {
+                                        for (idx, saved) in saved_regs.iter().enumerate() {
                                             self.regs[8 + idx] = saved.clone();
                                         }
 
-                                        self.set_reg(current_frame.result_reg, result.clone());
+                                        self.set_reg(result_reg, result.clone());
 
-                                        if self.frames.is_empty() {
+                                        if self.frames.len() == 1 {
+                                            self.frames.pop();
                                             return result;
                                         }
 
-                                        pc = current_frame.return_pc;
+                                        self.frames.pop();
+                                        pc = return_pc;
                                     }
                                     _ => panic!("tail call: global is not a function: {:?}", global),
                                 }

@@ -39,7 +39,8 @@ impl Compiler {
         let mut globals = HashMap::new();
         let mut compiler = Compiler::new("__toplevel__", true);
 
-        for expr in exprs {
+        let len = exprs.len();
+        for (i, expr) in exprs.iter().enumerate() {
             if let Expr::Cons { lawa, kucha } = expr.as_ref() {
                 if let Some(tok) = lawa.get_sada() {
                     if tok.text == "muhe" {
@@ -48,8 +49,11 @@ impl Compiler {
                     }
                 }
             }
-            let result_reg = compiler.compile_expr(expr.clone(), true);
-            compiler.emit_ret(result_reg);
+            let is_last = i == len - 1;
+            let result_reg = compiler.compile_expr(expr.clone(), is_last);
+            if is_last {
+                compiler.emit_ret(result_reg);
+            }
         }
 
         // Ensure toplevel always ends with RET
@@ -83,6 +87,7 @@ impl Compiler {
 
             let target_reg = X3;
             compiler.emit_li(target_reg, idx as u32);
+            compiler.locals.retain(|_, &mut reg| reg != target_reg);
             compiler.locals.insert(name.clone(), target_reg);
 
             let name_idx = compiler.add_const(Value::Symbol(name.clone().into()));
@@ -441,6 +446,26 @@ impl Compiler {
             "mite" => Some(13),
             "mite_str" => Some(14),
             "print" => Some(15),
+            "sys_listen" => Some(16),
+            "sys_accept" => Some(17),
+            "sys_read" => Some(18),
+            "sys_write" => Some(19),
+            "sys_close" => Some(20),
+            "sys_http_parse_path" => Some(21),
+            "sys_http_ok" => Some(22),
+            "sys_http_not_found" => Some(23),
+            "sys_http_parse_request" => Some(24),
+            "sys_http_response" => Some(25),
+            "sys_url_decode" => Some(26),
+            "sys_read_http" => Some(27),
+            "sys_args" => Some(28),
+            "sys_string_find" => Some(29),
+            "sys_string_length" => Some(30),
+            "sys_string_substr" => Some(31),
+            "sys_string_concat" => Some(32),
+            "sys_string_split" => Some(33),
+            "sys_string_replace" => Some(34),
+            "sys_string_trim" => Some(35),
             _ => None,
         }
     }
@@ -471,8 +496,23 @@ impl Compiler {
         };
 
         let call_reg = if func_reg >= X10 && func_reg < X10 + argc as u8 {
+            // If any arg is in X3, move it out first since we'll clobber X3
+            for i in 0..argc {
+                if arg_regs[i] == X3 {
+                    let scratch = self.alloc_temp();
+                    self.emit_mv(scratch, X3);
+                    arg_regs[i] = scratch;
+                    break;
+                }
+            }
             self.emit_mv(X3, func_reg);
             X3
+        } else if is_tail && !self.is_toplevel && func_reg < X8 {
+            // For tail calls, ensure func_reg is in saved register range
+            // so it's preserved across intermediate calls in the same frame
+            let saved_reg = X20;
+            self.emit_mv(saved_reg, func_reg);
+            saved_reg
         } else {
             func_reg
         };

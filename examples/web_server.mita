@@ -1,30 +1,16 @@
 ; MITA Web Server Example
-; Usage: mita odomu.mita examples/web_server.mita
+; Usage: mita odomu.mita http.mita examples/web_server.mita -- [port]
 
-; Define custom request handler
-(muhe ((my_handler (mita args
-  (tido ((path (lawa args))
-         (request_body (kucha args)))
-    (dala ((shato path "/") 
-      "<html><head><title>MITA Server</title></head>
-       <body><h1>Mosi mita! (Hello friend!)</h1>
-       <p>This is a web server written in MITA LISP.</p>
-       <p>Gusha (Try) these paths:</p>
-       <ul>
-         <li><a href='/'>Home</a></li>
-         <li><a href='/about'>About</a></li>
-       </ul>
-       </body></html>")
-      (dala ((shato path "/about")
-        "<html><head><title>About</title></head>
-         <body><h1>About MITA</h1>
-         <p>MITA is a LISP dialect for the Hilichurls of Teyvat.</p>
-         <p>Built with love and dada (passion)!</p>
-         </body></html>")
-        (da "<html><head><title>404</title></head>
-             <body><h1>Mosi mita? (What friend?)</h1>
-             <p>Page not found: " path "</p>
-             </body></html>"))))))))
+(muhe (
+  (my_handler (mita (req)
+    (tido ((path (url_decode (lawakucha req))))
+      (dala ((shato path "/")
+        (http_ok "<html><head><title>MITA Server</title></head><body><h1>Mosi mita!</h1><p>Welcome.</p></body></html>"))
+        ((shato path "/about")
+          (http_ok "<html><head><title>About</title></head><body><h1>About</h1><p>MITA LISP.</p></body></html>"))
+        (da (http_not_found "<html><head><title>404</title></head><body><h1>Not Found</h1></body></html>"))))))))
 
-; Start the server on port 8080
-(run_server 8080 my_handler)
+(tido ((args (sys_args))
+       (port (dala ((shato args nya) 8080)
+                   (da (lawa args)))))
+  (run_server "0.0.0.0" port my_handler))

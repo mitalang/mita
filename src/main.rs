@@ -6,25 +6,32 @@ fn main() {
     let mut do_prompt = true;
     let mut prompt_str = "> ".to_string();
     let mut files = Vec::new();
+    let mut script_args = Vec::new();
+    let mut pass_args = false;
 
     let args: Vec<String> = env::args().collect();
     let mut i = 1;
     while i < args.len() {
-        match args[i].as_str() {
-            "-sexpr" => print_sexpr = true,
-            "-doprompt" => {
-                i += 1;
-                if i < args.len() {
-                    do_prompt = args[i].parse().unwrap_or(true);
+        if pass_args {
+            script_args.push(args[i].clone());
+        } else {
+            match args[i].as_str() {
+                "-sexpr" => print_sexpr = true,
+                "-doprompt" => {
+                    i += 1;
+                    if i < args.len() {
+                        do_prompt = args[i].parse().unwrap_or(true);
+                    }
                 }
-            }
-            "-prompt" => {
-                i += 1;
-                if i < args.len() {
-                    prompt_str = args[i].clone();
+                "-prompt" => {
+                    i += 1;
+                    if i < args.len() {
+                        prompt_str = args[i].clone();
+                    }
                 }
+                "--" => pass_args = true,
+                file => files.push(file.to_string()),
             }
-            file => files.push(file.to_string()),
         }
         i += 1;
     }
@@ -33,6 +40,7 @@ fn main() {
 
     let mut vm = mita::vm::VM::new();
     mita::vm::builtins::register_all(&mut vm);
+    vm.script_args = script_args;
 
     for file in &files {
         load(&mut vm, file);
