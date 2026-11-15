@@ -13,7 +13,3 @@ path = "src/lib.rs"
 [[bin]]
 name = "mita"
 path = "src/main.rs"
-
-[[bin]]
-name = "dump_toplevel"
-path = "/tmp/dump_toplevel.rs"

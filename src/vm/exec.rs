@@ -275,6 +275,10 @@ impl VM {
                                     }
                                     _ => panic!("call: global is not a function: {:?}", global),
                                 }
+                            } else if let Some(result) =
+                                crate::vm::builtins::lakucha_access(&name, &self.regs[X10 as usize])
+                            {
+                                self.set_reg(rd, result);
                             } else {
                                 panic!("call: undefined function: {}", name);
                             }
@@ -372,6 +376,22 @@ impl VM {
                                     }
                                     _ => panic!("tail call: global is not a function: {:?}", global),
                                 }
+                            } else if let Some(result) =
+                                crate::vm::builtins::lakucha_access(&name, &self.regs[X10 as usize])
+                            {
+                                for (idx, saved) in saved_regs.iter().enumerate() {
+                                    self.regs[8 + idx] = saved.clone();
+                                }
+
+                                self.set_reg(result_reg, result.clone());
+
+                                if self.frames.len() == 1 {
+                                    self.frames.pop();
+                                    return result;
+                                }
+
+                                self.frames.pop();
+                                pc = return_pc;
                             } else {
                                 panic!("tail call: undefined function: {}", name);
                             }
@@ -440,11 +460,12 @@ impl VM {
             self.regs[X10 as usize] = list;
         }
 
-        let used_regs = closure.func.used_regs;
-        let num_s_regs = used_regs.saturating_sub(8).min(20) as usize;
-        let mut saved = Vec::with_capacity(num_s_regs);
-        for i in 0..num_s_regs {
-            saved.push(self.regs[8 + i].clone());
+        // Preserve the caller's register file. The compiler allocates
+        // registers linearly up to X63, and a callee may use any of them, so
+        // all caller-saved registers must be restored on return.
+        let mut saved = Vec::with_capacity(56);
+        for i in 8..64 {
+            saved.push(self.regs[i].clone());
         }
 
         self.frames.push(CallFrame {

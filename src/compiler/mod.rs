@@ -38,6 +38,8 @@ impl Compiler {
     pub fn compile_toplevel(exprs: &[Rc<Expr>]) -> (FuncObject, HashMap<String, Value>) {
         let mut globals = HashMap::new();
         let mut compiler = Compiler::new("__toplevel__", true);
+        // X10-X17 are reserved for call arguments; keep temps above them.
+        compiler.next_reg = X18;
 
         let len = exprs.len();
         for (i, expr) in exprs.iter().enumerate() {
@@ -45,6 +47,7 @@ impl Compiler {
                 if let Some(tok) = lawa.get_sada() {
                     if tok.text == "muhe" {
                         Self::compile_muhe_into(&mut compiler, kucha.clone(), &mut globals);
+                        compiler.next_reg = X18;
                         continue;
                     }
                 }
@@ -54,6 +57,9 @@ impl Compiler {
             if is_last {
                 compiler.emit_ret(result_reg);
             }
+            // Reclaim temporaries between top-level forms: their results are
+            // discarded, and registers are encoded in 6 bits (0-63).
+            compiler.next_reg = X18;
         }
 
         // Ensure toplevel always ends with RET
@@ -175,7 +181,11 @@ impl Compiler {
                     match op_tok.text.as_str() {
                         "plata" => {
                             let quoted = kucha.lawa();
-                            self.compile_expr(quoted, false)
+                            let val = Self::expr_to_value(&quoted);
+                            let reg = self.alloc_temp();
+                            let idx = self.add_const(val);
+                            self.emit_li(reg, idx as u32);
+                            reg
                         }
                         "ka" => {
                             self.compile_if(kucha.clone(), is_tail)
@@ -254,7 +264,7 @@ impl Compiler {
         let test_reg = self.compile_expr(test_expr, false);
         let else_label = self.new_label();
 
-        self.emit_beq(test_reg, X0, &else_label);
+        self.emit_branch_if_false(test_reg, &else_label);
         let then_reg = self.compile_expr(then_expr, is_tail);
 
         if is_tail && !self.is_toplevel {
@@ -330,6 +340,7 @@ impl Compiler {
         while !current.is_nil() {
             let clause = current.lawa();
             let remaining = current.kucha();
+            let is_last_clause = remaining.is_nil();
 
             if clause.is_atom() {
                 let reg = self.compile_expr(clause, is_tail);
@@ -356,10 +367,10 @@ impl Compiler {
             let test_reg = self.compile_expr(test_expr, false);
             let next_label = self.new_label();
 
-            self.emit_beq(test_reg, X0, &next_label);
+            self.emit_branch_if_false(test_reg, &next_label);
 
             let then_reg = if rest.is_nil() {
-                self.compile_expr(clause, is_tail)
+                self.compile_expr(clause.clone(), is_tail)
             } else {
                 self.compile_expr(rest.lawa(), is_tail)
             };
@@ -382,6 +393,30 @@ impl Compiler {
             }
 
             self.emit_label(&next_label);
+
+            // Match the tree interpreter: the final clause is an implicit
+            // else. If its test fails, evaluate the whole clause instead of
+            // falling through with nil.
+            if is_last_clause {
+                let fallback_reg = self.compile_expr(clause, is_tail);
+                if fallback_reg != result_reg {
+                    self.emit_mv(result_reg, fallback_reg);
+                }
+                if is_tail && !self.is_toplevel {
+                    let has_ret = self.func.bytecode.last()
+                        .map(|i| {
+                            let op = decode_op(*i);
+                            op == OP_TAIL || op == OP_RET
+                        })
+                        .unwrap_or(false);
+                    if !has_ret {
+                        self.emit_ret(result_reg);
+                    }
+                } else {
+                    self.emit_j(&end_label);
+                }
+            }
+
             current = remaining;
         }
 
@@ -566,6 +601,27 @@ impl Compiler {
         }
     }
 
+    fn expr_to_value(expr: &Expr) -> Value {
+        match expr {
+            Expr::Nil => Value::Nil,
+            Expr::Atom(tok) => {
+                match tok.typ {
+                    crate::token::TokenType::Number => Value::Number(tok.num),
+                    crate::token::TokenType::String => Value::String(tok.text.clone().into()),
+                    _ => {
+                        Self::predefined_value(&tok.text)
+                            .unwrap_or_else(|| Value::Symbol(tok.text.clone().into()))
+                    }
+                }
+            }
+            Expr::Cons { lawa, kucha } => {
+                let car = Self::expr_to_value(lawa);
+                let cdr = Self::expr_to_value(kucha);
+                Value::Cons(Rc::new((car, cdr)))
+            }
+        }
+    }
+
     fn alloc_reg(&mut self) -> u8 {
         let reg = self.next_reg;
         self.next_reg += 1;
@@ -619,9 +675,17 @@ impl Compiler {
         self.func.bytecode.push(encode_r(OP_TAIL, X0, rs1, X0, argc));
     }
 
-    fn emit_beq(&mut self, rs1: u8, rs2: u8, label: &str) {
+    fn emit_branch_if_false(&mut self, reg: u8, label: &str) {
+        // MITA truthiness matches the tree interpreter: only `da` is true.
+        let true_reg = self.alloc_temp();
+        let idx = self.add_const(Value::Bool(true));
+        self.emit_li(true_reg, idx as u32);
+        self.emit_bne(reg, true_reg, label);
+    }
+
+    fn emit_bne(&mut self, rs1: u8, rs2: u8, label: &str) {
         let pc = self.func.bytecode.len();
-        self.func.bytecode.push(encode_b(OP_BEQ, rs1, rs2, 0));
+        self.func.bytecode.push(encode_b(OP_BNE, rs1, rs2, 0));
         self.pending_jumps.push((pc, label.to_string()));
     }
 

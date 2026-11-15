@@ -106,3 +106,43 @@ fn test_vm_higher_order() {
     let code = "((mita (f) (f 5)) (mita (x) (celi x x)))";
     assert_eq!(eval_vm(code), "10");
 }
+
+#[test]
+fn test_vm_quote() {
+    assert_eq!(eval_vm("'(1 2 3)"), "(1 2 3)");
+    assert_eq!(eval_vm("(lawa '(1 2 3))"), "1");
+}
+
+#[test]
+fn test_vm_nested_call_argument_preserved() {
+    assert_eq!(eval_vm("(celi 1 (celi 2 3))"), "6");
+}
+
+#[test]
+fn test_vm_cond_implicit_else() {
+    assert_eq!(eval_vm("(dala ((shato 1 2) 1) (celi 1 2))"), "3");
+}
+
+#[test]
+fn test_vm_car_cdr_atom_is_nil() {
+    assert_eq!(eval_vm("(lawa 1)"), "nil");
+    assert_eq!(eval_vm("(kucha 1)"), "nil");
+}
+
+#[test]
+fn test_vm_composed_selector() {
+    assert_eq!(
+        eval_vm("(lalalakukucha '((1 2) (3 4) ((5 6)) (7 8)))"),
+        "5"
+    );
+}
+
+#[test]
+fn test_vm_many_toplevel_forms() {
+    let mut code = String::new();
+    for _ in 0..30 {
+        code.push_str("(celi 1 1) ");
+    }
+    code.push_str("(celi 20 22)");
+    assert_eq!(eval_vm(&code), "42");
+}

@@ -223,17 +223,67 @@ fn values_eq(a: &Value, b: &Value) -> bool {
 fn builtin_car(_vm: &mut VM, args: &[Value]) -> Value {
     match &args[0] {
         Value::Cons(pair) => pair.0.clone(),
-        Value::Nil => Value::Nil,
-        other => panic!("car: expected cons, got {:?}", other),
+        _ => Value::Nil,
     }
 }
 
 fn builtin_cdr(_vm: &mut VM, args: &[Value]) -> Value {
     match &args[0] {
         Value::Cons(pair) => pair.1.clone(),
-        Value::Nil => Value::Nil,
-        other => panic!("cdr: expected cons, got {:?}", other),
+        _ => Value::Nil,
     }
+}
+
+fn car_or_nil(value: &Value) -> Value {
+    match value {
+        Value::Cons(pair) => pair.0.clone(),
+        _ => Value::Nil,
+    }
+}
+
+fn cdr_or_nil(value: &Value) -> Value {
+    match value {
+        Value::Cons(pair) => pair.1.clone(),
+        _ => Value::Nil,
+    }
+}
+
+/// Resolve composed selectors such as `lalalakukucha` (car of car of car of
+/// cdr of cdr), matching the tree interpreter's `is_la_kucha` convention.
+pub(crate) fn lakucha_access(name: &str, value: &Value) -> Option<Value> {
+    let len = name.len();
+    if len < 6 {
+        return None;
+    }
+    let suffix = if len % 2 == 1 { "kucha" } else { "lawa" };
+    if !name.ends_with(suffix) {
+        return None;
+    }
+
+    let prefix = &name[..len - suffix.len()];
+    if prefix.len() % 2 != 0 {
+        return None;
+    }
+    for chunk in prefix.as_bytes().chunks(2) {
+        match std::str::from_utf8(chunk) {
+            Ok("la") | Ok("ku") => {}
+            _ => return None,
+        }
+    }
+
+    let mut current = if suffix == "kucha" {
+        cdr_or_nil(value)
+    } else {
+        car_or_nil(value)
+    };
+    for chunk in prefix.as_bytes().chunks(2).rev() {
+        current = match std::str::from_utf8(chunk).ok()? {
+            "la" => car_or_nil(&current),
+            "ku" => cdr_or_nil(&current),
+            _ => return None,
+        };
+    }
+    Some(current)
 }
 
 fn builtin_cons(_vm: &mut VM, args: &[Value]) -> Value {
