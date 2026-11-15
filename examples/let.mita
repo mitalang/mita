@@ -1,0 +1,16 @@
+; let 绑定示例 (tido)
+; tido = let, 局部变量绑定
+
+; 基本绑定
+(tido ((x unu) (y du))
+  (celi x y))  ; => 3
+
+; 嵌套 let
+(tido ((x du))
+  (tido ((y du))
+    (celi x y)))  ; => 4
+
+; let 遮蔽外层变量
+(tido ((x du))
+  (tido ((x mani))
+    x))  ; => 5

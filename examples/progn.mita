@@ -1,0 +1,16 @@
+; 顺序求值示例 (in)
+; in = progn, 顺序执行多个表达式
+
+; 基本顺序求值
+(in unu du unudu)  ; => 3
+
+; 与 setq 结合使用
+(muhe
+  ((counter (mita ()
+    (tido ((n 0))
+      (in
+        (plama n (celi n unu))
+        (plama n (celi n unu))
+        n))))))
+
+(counter)  ; => 2

@@ -1,0 +1,16 @@
+; MITA Web Server Example
+; Usage: mita odomu.mita http.mita examples/web_server.mita -- [port]
+
+(muhe (
+  (my_handler (mita (req)
+    (tido ((path (url_decode (lawakucha req))))
+      (dala ((shato path "/")
+        (http_ok "<html><head><title>MITA Server</title></head><body><h1>Mosi mita!</h1><p>Welcome.</p></body></html>"))
+        ((shato path "/about")
+          (http_ok "<html><head><title>About</title></head><body><h1>About</h1><p>MITA LISP.</p></body></html>"))
+        (da (http_not_found "<html><head><title>404</title></head><body><h1>Not Found</h1></body></html>"))))))))
+
+(tido ((args (sys_args))
+       (port (dala ((shato args nya) 8080)
+                   (da (lawa args)))))
+  (run_server "0.0.0.0" port my_handler))

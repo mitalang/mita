@@ -1,0 +1,8 @@
+; tail-recursive countdown
+(muhe
+  ((countdown (mita (n)
+    (ka (shato n unu)
+        n
+        (countdown (movo n unu)))))))
+
+(countdown 100000)

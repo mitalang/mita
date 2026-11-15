@@ -1,0 +1,23 @@
+; 高阶函数示例
+; 需要先加载 odomu.mita
+; 展示 si (map), valo (filter), mosi (reduce)
+
+; map: 平方列表
+(si (mita (x) (celida x x)) (sada unu du unudu))
+
+; filter: 筛选大于 2 的数
+(valo (mita (x) (unta x du)) (sada unu du unudu dudu mani))
+
+; reduce: 求和
+(mosi (mita (a b) (celi a b)) 0 (sada unu du unudu))
+
+; reduce: 求积
+(mosi (mita (a b) (celida a b)) unu (sada unu du unudu))
+
+; 组合使用
+; 先 map 平方，再 filter 大于 3 的，再求和
+(mosi (mita (a b) (celi a b))
+      0
+      (valo (mita (x) (unta x du))
+            (si (mita (x) (celida x x))
+                (sada unu du unudu dudu))))

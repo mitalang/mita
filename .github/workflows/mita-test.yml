@@ -1,0 +1,31 @@
+name: MITA Rust Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-mita:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc
+      
+      - name: Build FFI test library
+        run: gcc -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
+      
+      - name: Build MITA
+        run: cargo build --release
+      
+      - name: Run cargo test
+        run: cargo test
+      
+      - name: Run odomu.mita LISP tests
+        run: ./target/release/mita odomu.mita examples/odomu_test.mita

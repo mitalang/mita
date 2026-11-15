@@ -1,0 +1,12 @@
+; 阶乘 (factorial)
+(muhe
+  ((fak (mita (n)
+    (ka (aba n du)
+        unu
+        (celida n (fak (movo n unu))))))))
+
+(fak unu)
+(fak du)
+(fak unudu)
+(fak dudu)
+(fak mani)

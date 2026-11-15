@@ -1,0 +1,4 @@
+(muhe(
+  (add2 (mita (x) (celi x du)))
+))
+(add2 unu) ; => 3 

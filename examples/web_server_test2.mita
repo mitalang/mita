@@ -1,0 +1,25 @@
+(muhe ((test_handler (mita args
+  (tido ((path (lawa args)))
+    (dala ((shato path "/") "Hello from MITA")
+      (da "404")))))))
+
+(tido ((fd (net_listen 18080)))
+  (dala ((aba fd 0) nye)
+    (da (in
+      (print (sada "fd" fd))
+      (tido ((client (net_accept fd)))
+        (print (sada "client" client))
+        (dala ((aba client 0) nye)
+          (da (in
+            (net_read client)
+            (tido ((buf (net_get_buffer)))
+              (print (sada "buf" buf)))
+            (tido ((path (http_parse_path (net_get_buffer))))
+              (tido ((resp (test_handler path "")))
+                (tido ((http_resp (http_ok resp)))
+                  (print (sada "resp" http_resp))
+                  (net_write client http_resp))))
+            (net_close client)
+            da))))
+      (net_close fd)
+      da))))

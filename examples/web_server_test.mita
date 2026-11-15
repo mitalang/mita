@@ -1,0 +1,12 @@
+(muhe ((test_handler (mita args
+  (tido ((path (lawa args)))
+    (dala ((shato path "/") "Hello from MITA")
+      (da "404")))))))
+
+(tido ((fd (net_listen 18080)))
+  (dala ((aba fd 0) nye)
+    (da (in
+      (print (sada "fd" fd))
+      (serve_once fd test_handler)
+      (net_close fd)
+      da))))

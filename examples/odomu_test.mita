@@ -1,0 +1,60 @@
+; odomu.mita 库函数测试
+; 需要先加载 odomu.mita
+; mita odomu.mita examples/odomu_test.mita
+
+; lawakucha
+(lawakucha '(1 2 3)) ; => 2
+
+; lawakuchakucha
+(lawakuchakucha '(1 2 3)) ; => 3
+
+; kuchakucha
+(kuchakucha '(1 2 3)) ; => (3)
+
+; sada
+(sada 1 2 3) ; => (1 2 3)
+
+; tiga
+(tiga '(1 2 3)) ; => 3
+
+; si
+(si (mita (x) (celi x x)) '(1 2 3)) ; => (2 4 6)
+
+; valo
+(valo (mita (x) (aba x du)) '(1 2 3)) ; => (1)
+
+; mosi
+(mosi (mita (a b) (celi a b)) 0 '(1 2 3)) ; => 6
+
+; tomo
+(tomo '(1 2) '(3 4)) ; => (1 2 3 4)
+
+; domu
+(domu '(1 2 3)) ; => (3 2 1)
+
+; mito
+(mito 'b '((a 1) (b 2) (c 3))) ; => (b 2)
+
+; odomu
+(odomu 'a '(b a c)) ; => da
+
+; zido
+(zido '(1 2 3)) ; => 3
+
+; eleka
+(eleka 1 '(a b c)) ; => b
+
+; kuzi
+(kuzi da da nye) ; => nye
+
+; todo
+(todo nye da nye) ; => da
+
+; biat
+(biat da) ; => nye
+
+; kundala
+(kundala 'a '(a b a c)) ; => (b c)
+
+; pupu
+(pupu '((1 2) (3 (4 5)))) ; => (1 2 3 4 5) 

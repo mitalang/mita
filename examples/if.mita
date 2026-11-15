@@ -1,0 +1,21 @@
+; if 条件分支示例 (ka)
+; ka = if, 条件判断
+
+; 基本 if
+(ka da 'yes 'no)     ; => yes
+(ka nye 'yes 'no)    ; => no
+
+; 嵌套 if
+(ka (shato unu unu)
+    (ka (shato du du)
+        'all_true
+        'second_false)
+    'first_false)  ; => all_true
+
+; 用 if 实现 max
+(muhe
+  ((max (mita (a b)
+    (ka (unta a b) a b)))))
+
+(max du unu)   ; => 2
+(max unu du)   ; => 2
