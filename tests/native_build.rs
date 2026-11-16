@@ -175,6 +175,24 @@ fn builds_and_runs_fibonacci() {
 }
 
 #[test]
+fn builds_and_runs_cond() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_example("cond.mita");
+    assert_eq!(out, "no\n");
+}
+
+#[test]
+fn builds_and_runs_setq() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_example("setq.mita");
+    assert_eq!(out, "(2 . 1)\n");
+}
+
+#[test]
 fn runs_higher_order_lambda() {
     if !tools_available() {
         return;

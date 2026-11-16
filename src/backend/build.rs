@@ -58,11 +58,29 @@ pub fn build_files(inputs: &[String], opts: &BuildOptions) -> Result<(), String>
     let mlir_translate = find_tool("MLIR_TRANSLATE", "mlir-translate", "apt install mlir-19-tools")?;
     let llc = find_tool("LLC", "llc", "install the llvm toolchain")?;
     let cc_name = cc_for_target(&opts.target)?;
+    // `CC` takes precedence over the target-specific compiler in `find_tool`.
+    // For a non-x86_64 target, a user-set `CC` (typically the host `cc`)
+    // silently overrides the intended cross compiler, so surface a warning
+    // without changing the documented precedence.
+    if opts.target != "x86_64-unknown-linux-gnu" {
+        if let Ok(cc_env) = std::env::var("CC") {
+            if !cc_env.trim().is_empty() {
+                eprintln!(
+                    "mita: warning: CC={} overrides the default target compiler '{}' for '{}'",
+                    cc_env, cc_name, opts.target
+                );
+            }
+        }
+    }
     let cc = find_tool("CC", cc_name, "install a C compiler")?;
 
     let tmp = temp_dir();
     std::fs::create_dir_all(&tmp)
         .map_err(|e| format!("failed to create temp dir '{}': {}", tmp.display(), e))?;
+
+    if opts.keep_temps {
+        eprintln!("mita: keeping temporary files in {}", tmp.display());
+    }
 
     let runtime_c = tmp.join("mita_runtime.c");
     let runtime_h = tmp.join("mita_runtime.h");

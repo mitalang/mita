@@ -45,6 +45,7 @@ const DECLS: &[&str] = &[
     "llvm.func @mita_symbol(!llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
     "llvm.func @mita_make_closure(!llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
     "llvm.func @mita_call(!llvm.struct<(i64, i64)>, !llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
+    "llvm.func @mita_panic(!llvm.ptr)",
 ];
 
 /// A parsed function definition pending compilation.
@@ -797,6 +798,26 @@ impl<'a> FnCtx<'a> {
         Ok(self.emit_load(&slot))
     }
 
+    /// Whether a call head can be compiled by `gen_call` under the resolution
+    /// rules (local slot → builtin → known `muhe` → special form, or a
+    /// non-atom head as a dynamic call). Used by `gen_cond` to decide whether
+    /// the last-clause implicit-else fallback is actually compilable: an
+    /// uncallable head is a *runtime* error (the fallback may be unreachable),
+    /// not a compile error.
+    fn head_is_callable(&self, head: &Expr) -> bool {
+        match head {
+            Expr::Atom(tok) => {
+                let name = tok.text.as_str();
+                is_special_form(name)
+                    || self.lookup_var(name).is_some()
+                    || builtin_for(name).is_some()
+                    || self.shared.known_fns.contains_key(name)
+            }
+            // A non-atom head is a value (e.g. a lambda): dynamic call.
+            _ => true,
+        }
+    }
+
     /// `dala`: a nested `ka` matching the VM/tree semantics exactly.
     fn gen_cond(&mut self, clauses: Rc<Expr>) -> Result<String, String> {
         if clauses.is_nil() {
@@ -853,13 +874,34 @@ impl<'a> FnCtx<'a> {
         // Falsy: the last clause is an implicit else — re-evaluate the whole
         // clause as an expression — otherwise recurse into the next clause.
         self.body.push_str(&format!("  {}:\n", else_bb));
-        let else_val = if remaining.is_nil() {
-            self.gen_expr(clause.as_ref())?
+        if remaining.is_nil() {
+            // The implicit-else fallback re-evaluates the whole clause only
+            // when its head is callable. An uncallable head (e.g. `(da 'no)`)
+            // would be a compile error under `gen_expr`, but the fallback may
+            // be unreachable at runtime; mirror the tree interpreter by only
+            // failing if this branch is actually taken.
+            if self.head_is_callable(clause.lawa().as_ref()) {
+                let else_val = self.gen_expr(clause.as_ref())?;
+                self.emit_store(&slot, &else_val);
+                self.body.push_str(&format!("    llvm.br {}\n", end_bb));
+            } else {
+                let msg = self.intern_string("cond: implicit else clause is not callable");
+                let ptr = self.fresh();
+                self.body.push_str(&format!(
+                    "    {} = llvm.mlir.addressof {} : !llvm.ptr\n",
+                    ptr, msg
+                ));
+                self.body.push_str(&format!(
+                    "    llvm.call @mita_panic({}) : (!llvm.ptr) -> ()\n",
+                    ptr
+                ));
+                self.body.push_str("    llvm.unreachable\n");
+            }
         } else {
-            self.gen_cond(remaining)?
-        };
-        self.emit_store(&slot, &else_val);
-        self.body.push_str(&format!("    llvm.br {}\n", end_bb));
+            let else_val = self.gen_cond(remaining)?;
+            self.emit_store(&slot, &else_val);
+            self.body.push_str(&format!("    llvm.br {}\n", end_bb));
+        }
 
         self.body.push_str(&format!("  {}:\n", end_bb));
         Ok(self.emit_load(&slot))
@@ -957,6 +999,14 @@ enum Builtin {
     Binary(&'static str),
     Unary(&'static str),
     Print,
+}
+
+/// Whether `name` is a special form (reserved syntax, not shadowable).
+fn is_special_form(name: &str) -> bool {
+    matches!(
+        name,
+        "plata" | "ka" | "dala" | "tido" | "in" | "plama" | "mita"
+    )
 }
 
 /// Maps a builtin call name to its runtime lowering, if it is one.
