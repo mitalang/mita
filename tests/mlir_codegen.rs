@@ -21,3 +21,24 @@ fn emits_main_and_add() {
     assert!(mlir.contains("@mita_add"));
     assert!(mlir.contains("@mita_print"));
 }
+
+#[test]
+fn emits_cond_branch_and_runtime_calls() {
+    let mlir = compile_source("(ka (shato 1 1) 2 3)");
+    assert!(mlir.contains("@mita_eq"));
+    assert!(mlir.contains("llvm.cond_br"));
+}
+
+#[test]
+fn emits_cons_and_list_calls() {
+    let mlir = compile_source("(lawa (upa 1 2))");
+    assert!(mlir.contains("@mita_cons"));
+    assert!(mlir.contains("@mita_car"));
+}
+
+#[test]
+fn emits_string_global_and_constructor() {
+    let mlir = compile_source("(print \"hi\")");
+    assert!(mlir.contains("llvm.mlir.global"));
+    assert!(mlir.contains("@mita_string"));
+}
