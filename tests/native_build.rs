@@ -208,3 +208,24 @@ fn builds_from_multiple_files() {
     ]);
     assert_eq!(out, "42\n");
 }
+
+#[test]
+fn local_lambda_shadows_muhe() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_program(
+        "(muhe ((f (mita (x) (celi x 1))))) \
+         (tido ((f (mita (x) (celi x 2)))) (f 5))",
+    );
+    assert_eq!(out, "7\n");
+}
+
+#[test]
+fn local_lambda_shadows_builtin() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_program("(tido ((celi (mita (x) (celida x x)))) (celi 5))");
+    assert_eq!(out, "25\n");
+}

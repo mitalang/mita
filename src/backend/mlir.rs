@@ -580,63 +580,54 @@ impl<'a> FnCtx<'a> {
             _ => return self.gen_dynamic_call(head, &args),
         };
 
+        // Special forms are reserved syntax and cannot be shadowed by locals.
         match name.as_str() {
-            // Special forms.
             "plata" => {
                 if args.len() != 1 {
                     return Err("plata expects 1 argument".to_string());
                 }
-                self.gen_quote(args[0].clone())
+                return self.gen_quote(args[0].clone());
             }
             "ka" => {
                 if args.len() != 3 {
                     return Err("ka expects 3 arguments".to_string());
                 }
-                self.gen_if(args[0].clone(), args[1].clone(), args[2].clone())
+                return self.gen_if(args[0].clone(), args[1].clone(), args[2].clone());
             }
-            "dala" => self.gen_cond(expr.kucha()),
+            "dala" => return self.gen_cond(expr.kucha()),
             "tido" => {
                 if args.len() < 2 {
                     return Err("tido expects bindings and a body".to_string());
                 }
-                self.gen_let(args[0].clone(), args[1].clone())
+                return self.gen_let(args[0].clone(), args[1].clone());
             }
-            "in" => self.gen_progn(expr.kucha()),
-            "plama" => self.gen_setq(expr.kucha()),
+            "in" => return self.gen_progn(expr.kucha()),
+            "plama" => return self.gen_setq(expr.kucha()),
             "mita" => {
                 if args.len() < 2 {
                     return Err("mita expects formals and a body".to_string());
                 }
-                self.gen_lambda(args[0].clone(), args[1].clone())
+                return self.gen_lambda(args[0].clone(), args[1].clone());
             }
-            // Arithmetic.
-            "celi" => self.gen_binary(&args, "mita_add"),
-            "movo" => self.gen_binary(&args, "mita_sub"),
-            "celida" => self.gen_binary(&args, "mita_mul"),
-            "movoda" => self.gen_binary(&args, "mita_div"),
-            // Comparisons.
-            "shato" => self.gen_binary(&args, "mita_eq"),
-            "nyeshato" => self.gen_binary(&args, "mita_ne"),
-            "aba" => self.gen_binary(&args, "mita_lt"),
-            "unta" => self.gen_binary(&args, "mita_gt"),
-            "abashato" => self.gen_binary(&args, "mita_le"),
-            "untashato" => self.gen_binary(&args, "mita_ge"),
-            // Lists.
-            "upa" => self.gen_binary(&args, "mita_cons"),
-            "lawa" => self.gen_unary(&args, "mita_car"),
-            "kucha" => self.gen_unary(&args, "mita_cdr"),
-            // Printing.
-            "print" => self.gen_print(&args),
-            other => {
-                if let Some(arity) = self.shared.known_fns.get(other).copied() {
-                    self.gen_direct_call(other, arity, &args)
-                } else if self.lookup_var(other).is_some() {
-                    self.gen_dynamic_call(head, &args)
-                } else {
-                    Err(format!("unsupported function: {}", other))
-                }
-            }
+            _ => {}
         }
+
+        // Ordinary call heads resolve local slot -> builtin -> known muhe ->
+        // error. A local shadowing a builtin or `muhe` name wins.
+        if self.lookup_var(&name).is_some() {
+            return self.gen_dynamic_call(head, &args);
+        }
+        if let Some(builtin) = builtin_for(&name) {
+            return match builtin {
+                Builtin::Binary(f) => self.gen_binary(&args, f),
+                Builtin::Unary(f) => self.gen_unary(&args, f),
+                Builtin::Print => self.gen_print(&args),
+            };
+        }
+        if let Some(arity) = self.shared.known_fns.get(&name).copied() {
+            return self.gen_direct_call(&name, arity, &args);
+        }
+        Err(format!("unsupported function: {}", name))
     }
 
     /// A compile-time-known `muhe` function: direct `llvm.call @fn(args, argc)`.
@@ -959,6 +950,34 @@ impl<'a> FnCtx<'a> {
             }
         }
     }
+}
+
+/// A builtin function the compiler can emit a direct runtime call for.
+enum Builtin {
+    Binary(&'static str),
+    Unary(&'static str),
+    Print,
+}
+
+/// Maps a builtin call name to its runtime lowering, if it is one.
+fn builtin_for(name: &str) -> Option<Builtin> {
+    Some(match name {
+        "celi" => Builtin::Binary("mita_add"),
+        "movo" => Builtin::Binary("mita_sub"),
+        "celida" => Builtin::Binary("mita_mul"),
+        "movoda" => Builtin::Binary("mita_div"),
+        "shato" => Builtin::Binary("mita_eq"),
+        "nyeshato" => Builtin::Binary("mita_ne"),
+        "aba" => Builtin::Binary("mita_lt"),
+        "unta" => Builtin::Binary("mita_gt"),
+        "abashato" => Builtin::Binary("mita_le"),
+        "untashato" => Builtin::Binary("mita_ge"),
+        "upa" => Builtin::Binary("mita_cons"),
+        "lawa" => Builtin::Unary("mita_car"),
+        "kucha" => Builtin::Unary("mita_cdr"),
+        "print" => Builtin::Print,
+        _ => return None,
+    })
 }
 
 /// Collects the argument list of a call expression (the `kucha` tail).
