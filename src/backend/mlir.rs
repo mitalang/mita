@@ -6,11 +6,11 @@
 //! with `llvm.insertvalue`; heap-backed values (strings/symbols/lists) are
 //! built by calling the C runtime constructors.
 //!
-//! Scope: integer/string/quote literals, `celi/movo/celida/movoda`,
-//! comparisons, `upa/lawa/kucha`, `ka`, `dala`, `tido`, `in`, `plama`,
-//! `plata`, `print`, top-level sequencing, an automatic print of the final
+//! Scope: integer/string/quote literals, `celi/lata/kuzi/gusha`,
+//! comparisons, `upa/lawa/kucha`, `ka`, `dala`, `zido`, `in`, `movo`,
+//! `plata`, `beru`, top-level sequencing, an automatic print of the final
 //! top-level result (mirroring the interpreter's `load()`), fixed-arity
-//! `muhe` functions with two-phase name resolution, non-capturing `mita`
+//! `sada` functions with two-phase name resolution, non-capturing `muhe`
 //! lambdas, and closure creation / dynamic calls through `mita_call`.
 
 use std::collections::HashMap;
@@ -65,7 +65,7 @@ struct Shared {
     block_next: usize,
     globals: Vec<String>,
     seen_strings: HashMap<String, String>,
-    /// `muhe` function source name (no `@`) -> arity, for direct calls and
+    /// `sada` function source name (no `@`) -> arity, for direct calls and
     /// closure construction.
     known_fns: HashMap<String, usize>,
     lambda_count: usize,
@@ -89,7 +89,7 @@ struct FnCtx<'a> {
 
 /// Builds the `module { ... }` text for the given top-level expressions.
 pub fn compile(exprs: &[Rc<Expr>]) -> Result<String, String> {
-    // Phase 1: scan every top-level `muhe` and collect function definitions
+    // Phase 1: scan every top-level `sada` and collect function definitions
     // and names, so bodies (and top-level calls) can forward-reference them.
     let (mut worklist, known_fns) = collect_muhe(exprs)?;
 
@@ -106,7 +106,7 @@ pub fn compile(exprs: &[Rc<Expr>]) -> Result<String, String> {
     let mut functions: Vec<String> = Vec::new();
 
     // Compile `main` first: it may discover lambdas, which are queued and then
-    // compiled alongside the `muhe` bodies below. Function definitions may be
+    // compiled alongside the `sada` bodies below. Function definitions may be
     // emitted in any order; MLIR resolves `llvm.call` symbols module-wide.
     let main = compile_main(&mut shared, exprs)?;
 
@@ -141,7 +141,7 @@ pub fn compile(exprs: &[Rc<Expr>]) -> Result<String, String> {
     Ok(out)
 }
 
-/// Scans top-level `muhe` forms and returns their parsed definitions plus a
+/// Scans top-level `sada` forms and returns their parsed definitions plus a
 /// source-name -> arity map.
 fn collect_muhe(exprs: &[Rc<Expr>]) -> Result<(Vec<FnDef>, HashMap<String, usize>), String> {
     let mut fns = Vec::new();
@@ -150,10 +150,10 @@ fn collect_muhe(exprs: &[Rc<Expr>]) -> Result<(Vec<FnDef>, HashMap<String, usize
         let Expr::Cons { lawa, kucha } = expr.as_ref() else {
             continue;
         };
-        let Some(tok) = lawa.get_sada() else {
+        let Some(tok) = lawa.get_atom() else {
             continue;
         };
-        if tok.text != "muhe" {
+        if tok.text != "sada" {
             continue;
         }
         let defs = kucha.lawa();
@@ -161,8 +161,8 @@ fn collect_muhe(exprs: &[Rc<Expr>]) -> Result<(Vec<FnDef>, HashMap<String, usize
         while let Expr::Cons { lawa: def, kucha: rest } = current.as_ref() {
             let name_tok = def
                 .lawa()
-                .get_sada()
-                .ok_or_else(|| "muhe: expected function name".to_string())?;
+                .get_atom()
+                .ok_or_else(|| "sada: expected function name".to_string())?;
             let name = name_tok.text.clone();
             let lambda = def.kucha().lawa();
             let (params, body) = parse_lambda(&lambda)?;
@@ -198,7 +198,7 @@ fn parse_formals(formals: &Rc<Expr>) -> Result<Vec<String>, String> {
             let mut f = formals.clone();
             while let Expr::Cons { lawa, kucha } = f.as_ref() {
                 let tok = lawa
-                    .get_sada()
+                    .get_atom()
                     .ok_or_else(|| "lambda: expected parameter name".to_string())?;
                 params.push(tok.text.clone());
                 f = kucha.clone();
@@ -209,7 +209,7 @@ fn parse_formals(formals: &Rc<Expr>) -> Result<Vec<String>, String> {
 }
 
 /// Compiles the `main` function: runs each top-level expression in order
-/// (skipping `muhe`), auto-prints the final result, and returns 0.
+/// (skipping `sada`), auto-prints the final result, and returns 0.
 fn compile_main(shared: &mut Shared, exprs: &[Rc<Expr>]) -> Result<String, String> {
     let mut ctx = FnCtx::new(shared, Vec::new());
 
@@ -242,14 +242,14 @@ fn compile_main(shared: &mut Shared, exprs: &[Rc<Expr>]) -> Result<String, Strin
 fn is_muhe(expr: &Rc<Expr>) -> bool {
     match expr.as_ref() {
         Expr::Cons { lawa, .. } => lawa
-            .get_sada()
-            .map(|t| t.text == "muhe")
+            .get_atom()
+            .map(|t| t.text == "sada")
             .unwrap_or(false),
         _ => false,
     }
 }
 
-/// Compiles one function (a `muhe` def or a lambda) into a full `llvm.func`.
+/// Compiles one function (a `sada` def or a lambda) into a full `llvm.func`.
 fn emit_function(shared: &mut Shared, def: FnDef, out: &mut Vec<String>) -> Result<(), String> {
     let mut ctx = FnCtx::new(shared, def.banned);
 
@@ -601,17 +601,17 @@ impl<'a> FnCtx<'a> {
                 return self.gen_if(args[0].clone(), args[1].clone(), args[2].clone());
             }
             "dala" => return self.gen_cond(expr.kucha()),
-            "tido" => {
+            "zido" => {
                 if args.len() < 2 {
-                    return Err("tido expects bindings and a body".to_string());
+                    return Err("zido expects bindings and a body".to_string());
                 }
                 return self.gen_let(args[0].clone(), args[1].clone());
             }
             "in" => return self.gen_progn(expr.kucha()),
-            "plama" => return self.gen_setq(expr.kucha()),
-            "mita" => {
+            "movo" => return self.gen_setq(expr.kucha()),
+            "muhe" => {
                 if args.len() < 2 {
-                    return Err("mita expects formals and a body".to_string());
+                    return Err("muhe expects formals and a body".to_string());
                 }
                 return self.gen_lambda(args[0].clone(), args[1].clone());
             }
@@ -619,7 +619,7 @@ impl<'a> FnCtx<'a> {
         }
 
         // Ordinary call heads resolve local slot -> builtin -> known muhe ->
-        // error. A local shadowing a builtin or `muhe` name wins.
+        // error. A local shadowing a builtin or `sada` name wins.
         if self.lookup_var(&name).is_some() {
             return self.gen_dynamic_call(head, &args);
         }
@@ -636,7 +636,7 @@ impl<'a> FnCtx<'a> {
         Err(format!("unsupported function: {}", name))
     }
 
-    /// A compile-time-known `muhe` function: direct `llvm.call @fn(args, argc)`.
+    /// A compile-time-known `sada` function: direct `llvm.call @fn(args, argc)`.
     fn gen_direct_call(
         &mut self,
         name: &str,
@@ -693,7 +693,7 @@ impl<'a> FnCtx<'a> {
         Ok(result)
     }
 
-    /// `mita` lambda: queue its body as a function and build a closure value.
+    /// `sada` lambda: queue its body as a function and build a closure value.
     fn gen_lambda(&mut self, formals: Rc<Expr>, body: Rc<Expr>) -> Result<String, String> {
         let params = parse_formals(&formals)?;
         let arity = params.len();
@@ -804,7 +804,7 @@ impl<'a> FnCtx<'a> {
     }
 
     /// Whether a call head can be compiled by `gen_call` under the resolution
-    /// rules (local slot → builtin → known `muhe` → special form, or a
+    /// rules (local slot → builtin → known `sada` → special form, or a
     /// non-atom head as a dynamic call). Used by `gen_cond` to decide whether
     /// the last-clause implicit-else fallback is actually compilable: an
     /// uncallable head is a *runtime* error (the fallback may be unreachable),
@@ -912,7 +912,7 @@ impl<'a> FnCtx<'a> {
         Ok(self.emit_load(&slot))
     }
 
-    /// `tido`: allocate a slot for each binding, store its value, then
+    /// `zido`: allocate a slot for each binding, store its value, then
     /// evaluate the body in a fresh scope.
     fn gen_let(&mut self, bindings: Rc<Expr>, body: Rc<Expr>) -> Result<String, String> {
         self.scopes.push(HashMap::new());
@@ -922,9 +922,9 @@ impl<'a> FnCtx<'a> {
             while let Expr::Cons { lawa, kucha } = current.as_ref() {
                 let var_name = lawa
                     .lawa()
-                    .get_sada()
+                    .get_atom()
                     .map(|t| t.text.clone())
-                    .ok_or_else(|| "tido: expected variable name".to_string())?;
+                    .ok_or_else(|| "zido: expected variable name".to_string())?;
                 let val_expr = lawa.kucha().lawa();
                 let val = self.gen_expr(val_expr.as_ref())?;
                 let slot = self.alloca_value();
@@ -952,24 +952,24 @@ impl<'a> FnCtx<'a> {
         Ok(result)
     }
 
-    /// `plama`: store to an existing local slot; an unknown variable is a
+    /// `movo`: store to an existing local slot; an unknown variable is a
     /// compile error. Supports multiple var/value pairs.
     fn gen_setq(&mut self, args: Rc<Expr>) -> Result<String, String> {
         let mut current = args;
         let mut result = self.emit_nil();
         while let Expr::Cons { lawa, kucha } = current.as_ref() {
             let var_name = lawa
-                .get_sada()
+                .get_atom()
                 .map(|t| t.text.clone())
-                .ok_or_else(|| "plama: expected variable name".to_string())?;
+                .ok_or_else(|| "movo: expected variable name".to_string())?;
             let val_expr = match kucha.as_ref() {
                 Expr::Cons { lawa, .. } => lawa.clone(),
-                _ => return Err("plama: odd number of args".to_string()),
+                _ => return Err("movo: odd number of args".to_string()),
             };
             let val = self.gen_expr(val_expr.as_ref())?;
             let slot = self
                 .lookup_var(&var_name)
-                .ok_or_else(|| format!("plama: undefined variable {}", var_name))?;
+                .ok_or_else(|| format!("movo: undefined variable {}", var_name))?;
             self.emit_store(&slot, &val);
             result = val;
             current = match kucha.as_ref() {
@@ -1010,7 +1010,7 @@ enum Builtin {
 fn is_special_form(name: &str) -> bool {
     matches!(
         name,
-        "plata" | "ka" | "dala" | "tido" | "in" | "plama" | "mita"
+        "plata" | "ka" | "dala" | "zido" | "in" | "movo" | "muhe"
     )
 }
 
@@ -1018,9 +1018,9 @@ fn is_special_form(name: &str) -> bool {
 fn builtin_for(name: &str) -> Option<Builtin> {
     Some(match name {
         "celi" => Builtin::Binary("mita_add"),
-        "movo" => Builtin::Binary("mita_sub"),
-        "celida" => Builtin::Binary("mita_mul"),
-        "movoda" => Builtin::Binary("mita_div"),
+        "lata" => Builtin::Binary("mita_sub"),
+        "kuzi" => Builtin::Binary("mita_mul"),
+        "gusha" => Builtin::Binary("mita_div"),
         "shato" => Builtin::Binary("mita_eq"),
         "nyeshato" => Builtin::Binary("mita_ne"),
         "aba" => Builtin::Binary("mita_lt"),
@@ -1030,7 +1030,7 @@ fn builtin_for(name: &str) -> Option<Builtin> {
         "upa" => Builtin::Binary("mita_cons"),
         "lawa" => Builtin::Unary("mita_car"),
         "kucha" => Builtin::Unary("mita_cdr"),
-        "print" => Builtin::Print,
+        "beru" => Builtin::Print,
         _ => return None,
     })
 }

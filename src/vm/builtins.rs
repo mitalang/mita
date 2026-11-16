@@ -5,9 +5,9 @@ use std::rc::Rc;
 
 pub fn register_all(vm: &mut VM) {
     vm.register_builtin("celi", builtin_add);
-    vm.register_builtin("movo", builtin_sub);
-    vm.register_builtin("celida", builtin_mul);
-    vm.register_builtin("movoda", builtin_div);
+    vm.register_builtin("lata", builtin_sub);
+    vm.register_builtin("kuzi", builtin_mul);
+    vm.register_builtin("gusha", builtin_div);
     vm.register_builtin("aba", builtin_lt);
     vm.register_builtin("unta", builtin_gt);
     vm.register_builtin("abashato", builtin_le);
@@ -19,7 +19,7 @@ pub fn register_all(vm: &mut VM) {
     vm.register_builtin("upa", builtin_cons);
     vm.register_builtin("mite", builtin_ffi_exec);
     vm.register_builtin("mite_str", builtin_ffi_exec_str);
-    vm.register_builtin("print", builtin_print);
+    vm.register_builtin("beru", builtin_print);
     vm.register_builtin("sys_listen", builtin_sys_listen);
     vm.register_builtin("sys_accept", builtin_sys_accept);
     vm.register_builtin("sys_read", builtin_sys_read);
@@ -57,9 +57,9 @@ pub fn register_all(vm: &mut VM) {
     vm.register_builtin("evenp", builtin_evenp);
     vm.register_builtin("oddp", builtin_oddp);
     vm.register_builtin("numberp", builtin_numberp);
-    vm.register_builtin("consp", builtin_consp);
-    vm.register_builtin("atom", builtin_atom);
-    vm.register_builtin("null", builtin_null);
+    vm.register_builtin("upasi", builtin_consp);
+    vm.register_builtin("unusi", builtin_atom);
+    vm.register_builtin("nyasi", builtin_null);
 }
 
 fn builtin_string_find(_vm: &mut VM, args: &[Value]) -> Value {
@@ -381,7 +381,7 @@ fn builtin_ffi_exec(vm: &mut VM, args: &[Value]) -> Value {
                     _ => panic!("mite: unsupported argument types: {:?}", cargs),
                 }
             }
-            n => panic!("mite: unsupported argument count: {} (max 2)", n),
+            n => panic!("mite: unsupported argument manisi: {} (max 2)", n),
         }
     };
 
@@ -429,7 +429,7 @@ fn builtin_ffi_exec_str(vm: &mut VM, args: &[Value]) -> Value {
                     _ => panic!("mite: unsupported argument type: {:?}", cargs[0]),
                 }
             }
-            n => panic!("mite_str: unsupported argument count: {} (max 1)", n),
+            n => panic!("mite_str: unsupported argument manisi: {} (max 1)", n),
         }
     };
 

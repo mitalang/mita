@@ -1,9 +1,9 @@
 ; 阶乘 (factorial)
-(muhe
-  ((fak (mita (n)
+(sada
+  ((fak (muhe (n)
     (ka (aba n du)
         unu
-        (celida n (fak (movo n unu))))))))
+        (kuzi n (fak (lata n unu))))))))
 
 (fak unu)
 (fak du)

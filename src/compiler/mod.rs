@@ -44,8 +44,8 @@ impl Compiler {
         let len = exprs.len();
         for (i, expr) in exprs.iter().enumerate() {
             if let Expr::Cons { lawa, kucha } = expr.as_ref() {
-                if let Some(tok) = lawa.get_sada() {
-                    if tok.text == "muhe" {
+                if let Some(tok) = lawa.get_atom() {
+                    if tok.text == "sada" {
                         Self::compile_muhe_into(&mut compiler, kucha.clone(), &mut globals);
                         compiler.next_reg = X18;
                         continue;
@@ -80,7 +80,7 @@ impl Compiler {
         let mut current = body.lawa();
         while !current.is_nil() {
             let def = current.lawa();
-            let name_tok = def.lawa().get_sada().expect("muhe: expected symbol");
+            let name_tok = def.lawa().get_atom().expect("sada: expected symbol");
             let name = name_tok.text.clone();
             let lambda = def.kucha().lawa();
 
@@ -111,7 +111,7 @@ impl Compiler {
         let formals = lambda.kucha().lawa();
         let body = lambda.kucha().kucha().lawa();
         let num_params = if formals.is_atom() {
-            let tok = formals.get_sada().expect("lambda: expected param");
+            let tok = formals.get_atom().expect("lambda: expected param");
             compiler.emit_mv(X18, X10);
             compiler.locals.insert(tok.text.clone(), X18);
             compiler.func.variadic = true;
@@ -120,7 +120,7 @@ impl Compiler {
             let mut count = 0;
             let mut f = formals;
             while !f.is_nil() {
-                let tok = f.lawa().get_sada().expect("lambda: expected param");
+                let tok = f.lawa().get_atom().expect("lambda: expected param");
                 let local_reg = X18 + count;
                 compiler.emit_mv(local_reg, X10 + count);
                 compiler.locals.insert(tok.text.clone(), local_reg);
@@ -177,7 +177,7 @@ impl Compiler {
                 }
             }
             Expr::Cons { lawa, kucha } => {
-                if let Some(op_tok) = lawa.get_sada() {
+                if let Some(op_tok) = lawa.get_atom() {
                     match op_tok.text.as_str() {
                         "plata" => {
                             let quoted = kucha.lawa();
@@ -190,7 +190,7 @@ impl Compiler {
                         "ka" => {
                             self.compile_if(kucha.clone(), is_tail)
                         }
-                        "tido" => {
+                        "zido" => {
                             self.compile_let(kucha.clone(), is_tail)
                         }
                         "in" => {
@@ -199,10 +199,10 @@ impl Compiler {
                         "dala" => {
                             self.compile_cond(kucha.clone(), is_tail)
                         }
-                        "plama" => {
+                        "movo" => {
                             self.compile_setq(kucha.clone(), is_tail)
                         }
-                        "mita" => {
+                        "muhe" => {
                             let reg = self.alloc_temp();
                             let idx = self.func.const_pool.len();
                             let func = Self::compile_lambda("lambda", expr);
@@ -310,7 +310,7 @@ impl Compiler {
         let mut current = bindings;
         while !current.is_nil() {
             let binding = current.lawa();
-            let var_tok = binding.lawa().get_sada().expect("let: expected var");
+            let var_tok = binding.lawa().get_atom().expect("let: expected var");
             let val_expr = binding.kucha().lawa();
 
             let val_reg = self.compile_expr(val_expr, false);
@@ -435,17 +435,17 @@ impl Compiler {
             let var = current.lawa();
             current = current.kucha();
             if current.is_nil() {
-                panic!("plama: odd number of args");
+                panic!("movo: odd number of args");
             }
             let val = self.compile_expr(current.lawa(), false);
             current = current.kucha();
 
-            let var_tok = var.get_sada().expect("plama: no tiga param");
+            let var_tok = var.get_atom().expect("movo: no tiga param");
             if let Some(&reg) = self.locals.get(&var_tok.text) {
                 self.emit_mv(reg, val);
                 result = reg;
             } else {
-                panic!("plama: undefined variable {}", var_tok.text);
+                panic!("movo: undefined variable {}", var_tok.text);
             }
         }
 
@@ -466,9 +466,9 @@ impl Compiler {
     fn builtin_index(name: &str) -> Option<u16> {
         match name {
             "celi" => Some(0),
-            "movo" => Some(1),
-            "celida" => Some(2),
-            "movoda" => Some(3),
+            "lata" => Some(1),
+            "kuzi" => Some(2),
+            "gusha" => Some(3),
             "aba" => Some(4),
             "unta" => Some(5),
             "abashato" => Some(6),
@@ -480,7 +480,7 @@ impl Compiler {
             "upa" => Some(12),
             "mite" => Some(13),
             "mite_str" => Some(14),
-            "print" => Some(15),
+            "beru" => Some(15),
             "sys_listen" => Some(16),
             "sys_accept" => Some(17),
             "sys_read" => Some(18),
@@ -518,9 +518,9 @@ impl Compiler {
             "evenp" => Some(50),
             "oddp" => Some(51),
             "numberp" => Some(52),
-            "consp" => Some(53),
-            "atom" => Some(54),
-            "null" => Some(55),
+            "upasi" => Some(53),
+            "unusi" => Some(54),
+            "nyasi" => Some(55),
             _ => None,
         }
     }

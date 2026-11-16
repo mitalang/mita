@@ -13,8 +13,8 @@
     'first_false)  ; => all_true
 
 ; 用 if 实现 max
-(muhe
-  ((max (mita (a b)
+(sada
+  ((max (muhe (a b)
     (ka (unta a b) a b)))))
 
 (max du unu)   ; => 2

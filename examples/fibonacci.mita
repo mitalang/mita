@@ -1,11 +1,11 @@
 ; 斐波那契数列 (Fibonacci)
 ; 使用 ka (if) 递归
-(muhe
-  ((fib (mita (n)
+(sada
+  ((fib (muhe (n)
     (ka (aba n du)
         n
-        (celi (fib (movo n unu))
-              (fib (movo n du))))))))
+        (celi (fib (lata n unu))
+              (fib (lata n du))))))))
 
 ; 测试
 (fib unu)    ; => 1

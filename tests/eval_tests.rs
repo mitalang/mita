@@ -75,7 +75,7 @@ fn test_upa_eval() {
     let tests = vec![
         ("(upa 1 2)", "(1 . 2)"),
         ("(upa 'a (upa 'b (upa 'c '())))", "(a b c)"),
-        ("(list 'a 'b 'c)", "(a b c)"),
+        ("(upa 'a (upa 'b (upa 'c '())))", "(a b c)"),
         ("(upa 1 '(2 3 4))", "(1 2 3 4)"),
         ("(upa '(a b c) ())", "((a b c))"),
         ("(upa '(a b c) '(d))", "((a b c) d)"),
@@ -108,9 +108,9 @@ fn test_strings() {
 fn test_cond_eval() {
     let tests = vec![
         ("(celi 3 2)", "5"),
-        ("(movo 3 2)", "1"),
-        ("(celida 10 2)", "20"),
-        ("(movoda 6 3)", "2"),
+        ("(lata 3 2)", "1"),
+        ("(kuzi 10 2)", "20"),
+        ("(gusha 6 3)", "2"),
         ("(aba 2 3)", "da"),
         ("(dala ((aba 2 3) 'UNTA) (da 'ABA))", "UNTA"),
         ("(aba 3 2)", "nye"),
@@ -133,7 +133,7 @@ fn test_cond_eval() {
 
 #[test]
 fn test_apply() {
-    let l = "(mita (x y) (upa (lawa x) y))";
+    let l = "(muhe (x y) (upa (lawa x) y))";
     let mut p = Parser::new(l);
     let lambda = p.list();
     let a = "((a b) (c d))";
@@ -150,13 +150,13 @@ fn test_example() {
     let tests = vec![
         (
             "(yafib)",
-            "(muhe((yafib (mita (si) (dala ((shato si 0) 0)(da (dala ((aba si du) unu)(da (celi (yafib(movo si du)) (yafib(movo si unu)))))))))))",
+            "(sada((yafib (muhe (si) (dala ((shato si 0) 0)(da (dala ((aba si du) unu)(da (celi (yafib(lata si du)) (yafib(lata si unu)))))))))))",
             "(yafib 10)",
             "55",
         ),
         (
             "(testlalalakukucha)",
-            "(muhe((testlalalakukucha (mita (si) (lalalakukucha si)))))",
+            "(sada((testlalalakukucha (muhe (si) (lalalakukucha si)))))",
             "(testlalalakukucha '((1 2) (3 4) ((5 6)) (7 8)))",
             "5",
         ),
@@ -179,10 +179,10 @@ fn test_example() {
 #[test]
 fn test_stack_trace() {
     let prog = "
-    (muhe(
-        (error (mita (x) 
-            (dala ((shato x 0) (movoda 0 0))
-                (da (error (movo x 1)))
+    (sada(
+        (error (muhe (x)
+            (dala ((shato x 0) (gusha 0 0))
+                (da (error (lata x 1)))
             )
         ))
     ))";
@@ -244,32 +244,32 @@ fn test_odomu_kuchakucha() {
 #[test]
 fn test_odomu_sada() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(sada 1 2 3)"), "(1 2 3)");
+    assert_eq!(eval_with_context(&mut c, "(tiga 1 2 3)"), "(1 2 3)");
 }
 
 #[test]
 fn test_odomu_tiga() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(tiga '(1 2 3))"), "3");
-    assert_eq!(eval_with_context(&mut c, "(tiga '())"), "0");
+    assert_eq!(eval_with_context(&mut c, "(tigamani '(1 2 3))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(tigamani '())"), "0");
 }
 
 #[test]
 fn test_odomu_si() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(si (mita (x) (celi x x)) '(1 2 3))"), "(2 4 6)");
+    assert_eq!(eval_with_context(&mut c, "(si (muhe (x) (celi x x)) '(1 2 3))"), "(2 4 6)");
 }
 
 #[test]
 fn test_odomu_valo() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(valo (mita (x) (aba x du)) '(1 2 3))"), "(1)");
+    assert_eq!(eval_with_context(&mut c, "(valo (muhe (x) (aba x du)) '(1 2 3))"), "(1)");
 }
 
 #[test]
 fn test_odomu_mosi() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(mosi (mita (a b) (celi a b)) 0 '(1 2 3))"), "6");
+    assert_eq!(eval_with_context(&mut c, "(mosi (muhe (a b) (celi a b)) 0 '(1 2 3))"), "6");
 }
 
 #[test]
@@ -300,7 +300,7 @@ fn test_odomu_odomu() {
 #[test]
 fn test_odomu_zido() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(zido '(1 2 3))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(untasi '(1 2 3))"), "3");
 }
 
 #[test]
@@ -312,9 +312,9 @@ fn test_odomu_eleka() {
 #[test]
 fn test_odomu_kuzi() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(kuzi da da nye)"), "nye");
-    assert_eq!(eval_with_context(&mut c, "(kuzi da da da)"), "da");
-    assert_eq!(eval_with_context(&mut c, "(kuzi nye nye)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(kuzitomo da da nye)"), "nye");
+    assert_eq!(eval_with_context(&mut c, "(kuzitomo da da da)"), "da");
+    assert_eq!(eval_with_context(&mut c, "(kuzitomo nye nye)"), "nye");
 }
 
 #[test]
@@ -341,13 +341,13 @@ fn test_odomu_shato() {
 #[test]
 fn test_odomu_kundala() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(kundala 'a '(a b a c))"), "(b c)");
+    assert_eq!(eval_with_context(&mut c, "(ika 'a '(a b a c))"), "(b c)");
 }
 
 #[test]
 fn test_odomu_pupu() {
     let mut c = load_odomu();
-    assert_eq!(eval_with_context(&mut c, "(pupu '((1 2) (3 (4 5))))"), "(1 2 3 4 5)");
+    assert_eq!(eval_with_context(&mut c, "(tigakundala '((1 2) (3 (4 5))))"), "(1 2 3 4 5)");
 }
 
 #[test]
@@ -381,7 +381,7 @@ fn test_comparison_operators() {
 fn test_div_zero() {
     let mut c = Context::new(0);
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        eval_with_context(&mut c, "(movoda 1 0)");
+        eval_with_context(&mut c, "(gusha 1 0)");
     }));
     assert!(result.is_err(), "expected panic on div by zero");
 }
@@ -399,7 +399,7 @@ fn test_undefined_symbol() {
 fn test_args_mismatch() {
     let mut c = Context::new(0);
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        eval_with_context(&mut c, "((mita (x y) x) 1)");
+        eval_with_context(&mut c, "((muhe (x y) x) 1)");
     }));
     assert!(result.is_err(), "expected panic on args mismatch");
 }
@@ -408,7 +408,7 @@ fn test_args_mismatch() {
 fn test_stack_depth_protection() {
     let mut c = Context::new(10);
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        eval_with_context(&mut c, "((mita (x) (x x)) (mita (x) (x x)))");
+        eval_with_context(&mut c, "((muhe (x) (x x)) (muhe (x) (x x)))");
     }));
     assert!(result.is_err(), "expected panic on stack overflow");
 }
@@ -416,8 +416,8 @@ fn test_stack_depth_protection() {
 #[test]
 fn test_let() {
     let mut c = Context::new(0);
-    assert_eq!(eval_with_context(&mut c, "(tido ((x 1) (y 2)) (celi x y))"), "3");
-    assert_eq!(eval_with_context(&mut c, "(tido ((x 5)) (celi x x))"), "10");
+    assert_eq!(eval_with_context(&mut c, "(zido ((x 1) (y 2)) (celi x y))"), "3");
+    assert_eq!(eval_with_context(&mut c, "(zido ((x 5)) (celi x x))"), "10");
 }
 
 #[test]
@@ -438,14 +438,14 @@ fn test_progn() {
 #[test]
 fn test_setq() {
     let mut c = Context::new(0);
-    assert_eq!(eval_with_context(&mut c, "(plama x 42)"), "42");
+    assert_eq!(eval_with_context(&mut c, "(movo x 42)"), "42");
     assert_eq!(eval_with_context(&mut c, "(celi x 1)"), "43");
 }
 
 #[test]
 fn test_tail_call_optimization() {
     let mut c = Context::new(0);
-    let prog = "(muhe((fak_tco (mita (n acc) (ka (shato n unu) acc (fak_tco (movo n unu) (celida n acc)))))))";
+    let prog = "(sada((fak_tco (muhe (n acc) (ka (shato n unu) acc (fak_tco (lata n unu) (kuzi n acc)))))))";
     let mut p = Parser::new(prog);
     c.eval_toplevel(p.list());
     assert_eq!(eval_with_context(&mut c, "(fak_tco 10 1)"), "3628800");
@@ -455,7 +455,7 @@ fn test_tail_call_optimization() {
 #[test]
 fn test_tail_call_no_stack_overflow() {
     let mut c = Context::new(100);
-    let prog = "(muhe((countdown (mita (n) (ka (shato n unu) n (countdown (movo n unu)))))))";
+    let prog = "(sada((countdown (muhe (n) (ka (shato n unu) n (countdown (lata n unu)))))))";
     let mut p = Parser::new(prog);
     c.eval_toplevel(p.list());
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

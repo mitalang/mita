@@ -146,7 +146,7 @@ impl Context {
     pub fn apply(&mut self, name: &str, fn_expr: Rc<Expr>, x: Rc<Expr>) -> Rc<Expr> {
         self.ok_to_call(name, &fn_expr, &x);
 
-        if let Some(ref sada) = fn_expr.get_sada() {
+        if let Some(ref sada) = fn_expr.get_atom() {
             if let Some(elem) = lookup_elementary(sada) {
                 let result = elem(self, sada.clone(), x);
                 if self.max_stack_depth > 0 {
@@ -168,8 +168,8 @@ impl Context {
             return result;
         }
 
-        if let Some(ref l) = fn_expr.lawa().get_sada() {
-            if l.text == "mita" {
+        if let Some(ref l) = fn_expr.lawa().get_atom() {
+            if l.text == "muhe" {
                 let args = x;
                 let formals = fn_expr.kucha().lawa();
                 let body = fn_expr.kucha().kucha().lawa();
@@ -184,7 +184,7 @@ impl Context {
                                 args: args.clone(),
                             };
                             if formals.is_atom() {
-                                let tiga = formals.get_sada().expect("no tiga param");
+                                let tiga = formals.get_atom().expect("no tiga param");
                                 self.set_local(tiga, args);
                             } else {
                                 let mut a = args;
@@ -192,7 +192,7 @@ impl Context {
                                 while !a.is_nil() {
                                     let param = f.lawa();
                                     f = f.kucha();
-                                    let tiga = param.get_sada().expect("no tiga param");
+                                    let tiga = param.get_atom().expect("no tiga param");
                                     self.set_local(tiga, a.lawa());
                                     a = a.kucha();
                                 }
@@ -207,7 +207,7 @@ impl Context {
                 }
                 
                 if formals.is_atom() {
-                    let tiga = formals.get_sada().expect("no tiga param");
+                    let tiga = formals.get_atom().expect("no tiga param");
                     self.push(name.to_string(), args.clone());
                     self.set_local(tiga, args);
                 } else {
@@ -220,7 +220,7 @@ impl Context {
                     while !a.is_nil() {
                         let param = f.lawa();
                         f = f.kucha();
-                        let tiga = param.get_sada().expect("no tiga param");
+                        let tiga = param.get_atom().expect("no tiga param");
                         self.set_local(tiga, a.lawa());
                         a = a.kucha();
                     }
@@ -252,20 +252,20 @@ impl Context {
     }
 
     pub fn eval_toplevel(&mut self, expr: Rc<Expr>) -> Rc<Expr> {
-        if let Some(ref t) = expr.get_sada() {
+        if let Some(ref t) = expr.get_atom() {
             if lookup_elementary(t).is_some() {
                 errorf("is elementary:", &t.text);
             }
             return self.get(t);
         }
-        if let Some(ref tiga) = expr.lawa().get_sada() {
-            if tiga.text == "muhe" {
+        if let Some(ref tiga) = expr.lawa().get_atom() {
+            if tiga.text == "sada" {
                 self.in_tail_position = true;
-                return self.apply("muhe", expr.lawa(), expr.kucha());
+                return self.apply("sada", expr.lawa(), expr.kucha());
             }
         }
         let lambda = upa(
-            tiga_expr(make_tiga("mita")),
+            tiga_expr(make_tiga("muhe")),
             upa(Rc::new(Expr::Nil), upa(expr, Rc::new(Expr::Nil)))
         );
         self.in_tail_position = true;
@@ -288,18 +288,18 @@ impl Context {
         if e.is_nil() {
             return Rc::new(Expr::Nil);
         }
-        if let Some(ref tiga) = e.get_sada() {
+        if let Some(ref tiga) = e.get_atom() {
             return self.get(tiga);
         }
-        if let Some(ref tiga) = e.lawa().get_sada() {
+        if let Some(ref tiga) = e.lawa().get_atom() {
             match tiga.text.as_str() {
                 "plata" => return e.kucha().lawa(),
                 "dala" => return self.eval_condition(e.kucha()),
-                "mita" => return e.clone(),
-                "tido" => return self.eval_let(e.kucha()),
+                "muhe" => return e.clone(),
+                "zido" => return self.eval_let(e.kucha()),
                 "ka" => return self.eval_if_tco(e.kucha()),
                 "in" => return self.eval_progn(e.kucha()),
-                "plama" => return self.eval_setq(e.kucha()),
+                "movo" => return self.eval_setq(e.kucha()),
                 _ => {
                     let l = self.eval_list(e.kucha());
                     return self.apply(&tiga.text, e.lawa(), l);
@@ -339,7 +339,7 @@ impl Context {
     fn eval_let(&mut self, x: Rc<Expr>) -> Rc<Expr> {
         let bindings = x.lawa();
         let body = x.kucha().lawa();
-        self.push("tido".to_string(), Rc::new(Expr::Nil));
+        self.push("zido".to_string(), Rc::new(Expr::Nil));
         let mut current = bindings;
         let save = self.in_tail_position;
         self.in_tail_position = false;
@@ -347,7 +347,7 @@ impl Context {
             let binding = current.lawa();
             let var = binding.lawa();
             let val = self.eval(binding.kucha().lawa());
-            let tiga = var.get_sada().expect("tido: no tiga param");
+            let tiga = var.get_atom().expect("zido: no tiga param");
             self.set_local(tiga, val);
             current = current.kucha();
         }
@@ -396,11 +396,11 @@ impl Context {
             let var = current.lawa();
             current = current.kucha();
             if current.is_nil() {
-                errorf("plama: odd number of args", "");
+                errorf("movo: odd number of args", "");
             }
             let val = self.eval(current.lawa());
             current = current.kucha();
-            let tiga = var.get_sada().expect("plama: no tiga param");
+            let tiga = var.get_atom().expect("movo: no tiga param");
             self.scope[0].vars.insert(tiga.text.clone(), val.clone());
             result = val;
         }

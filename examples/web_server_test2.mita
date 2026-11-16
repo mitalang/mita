@@ -1,29 +1,29 @@
-(muhe (
-  (test_handler (mita (req)
-    (tido ((path (lawakucha req)))
+(sada (
+  (test_handler (muhe (req)
+    (zido ((path (lawakucha req)))
       (dala ((shato path "/") "Hello from MITA")
         (da "404")))))
 
-  (handle_client (mita (client)
+  (handle_client (muhe (client)
     (in
-      (tido ((raw (net_read client)))
+      (zido ((raw (net_read client)))
         (in
-          (print (sada "raw" raw))
+          (beru (tiga "raw" raw))
           (net_write client
             (http_ok
               (test_handler (sys_http_parse_request raw))))))
       (net_close client)
       da)))
 
-  (serve_one (mita (fd)
+  (serve_one (muhe (fd)
     (in
-      (print (sada "fd" fd))
-      (tido ((client (net_accept fd)))
+      (beru (tiga "fd" fd))
+      (zido ((client (net_accept fd)))
         (in
-          (print (sada "client" client))
+          (beru (tiga "client" client))
           (handle_client client)))
       (net_close fd)
       da)))))
 
-(tido ((fd (net_listen 18080)))
+(zido ((fd (net_listen 18080)))
   (serve_one fd))

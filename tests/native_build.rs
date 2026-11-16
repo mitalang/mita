@@ -60,7 +60,7 @@ fn builds_and_runs_add_program() {
     }
     let dir = tempdir();
     let src = dir.join("add.mita");
-    std::fs::write(&src, "(print (celi 1 2))").unwrap();
+    std::fs::write(&src, "(beru (celi 1 2))").unwrap();
     let exe = dir.join("add");
     build_files(
         &[src.display().to_string()],
@@ -83,14 +83,14 @@ fn runs_expressions_control_flow_and_locals() {
     }
     let cases = [
         ("(ka (shato 1 1) 10 20)", "10\n"),
-        ("(tido ((x 1)) (plama x (celi x 1)) x)", "2\n"),
+        ("(zido ((x 1)) (movo x (celi x 1)) x)", "2\n"),
         ("(in 1 2 3)", "3\n"),
         ("(dala ((shato 1 2) 10) 20)", "20\n"),
         ("(dala ((shato 1 2) 10) (celi 1 2))", "3\n"),
         ("(dala ((shato 1 1) 10) 20)", "10\n"),
         ("(lawa (upa 1 2))", "1\n"),
         ("'(1 2)", "(1 2)\n"),
-        ("(print \"hi\")", "\"hi\"\nnil\n"),
+        ("(beru \"hi\")", "\"hi\"\nnil\n"),
     ];
     for (source, expected) in cases {
         let out = run_program(source);
@@ -232,7 +232,7 @@ fn runs_higher_order_lambda() {
     if !tools_available() {
         return;
     }
-    let out = run_program("((mita (f) (f 5)) (mita (x) (celi x x)))");
+    let out = run_program("((muhe (f) (f 5)) (muhe (x) (celi x x)))");
     assert_eq!(out, "10\n");
 }
 
@@ -242,9 +242,9 @@ fn runs_mutual_recursion() {
         return;
     }
     let out = run_program(
-        "(muhe (\
-         (myeven (mita (n) (ka (shato n 0) da (myodd (movo n 1))))) \
-         (myodd (mita (n) (ka (shato n 0) nye (myeven (movo n 1))))))) \
+        "(sada (\
+         (myeven (muhe (n) (ka (shato n 0) da (myodd (lata n 1))))) \
+         (myodd (muhe (n) (ka (shato n 0) nye (myeven (lata n 1))))))) \
          (myeven 10)",
     );
     assert_eq!(out, "da\n");
@@ -256,7 +256,7 @@ fn builds_from_multiple_files() {
         return;
     }
     let out = run_files(&[
-        ("lib.mita", "(muhe ((double (mita (x) (celida x du)))))"),
+        ("lib.mita", "(sada ((double (muhe (x) (kuzi x du)))))"),
         ("app.mita", "(double 21)"),
     ]);
     assert_eq!(out, "42\n");
@@ -268,8 +268,8 @@ fn local_lambda_shadows_muhe() {
         return;
     }
     let out = run_program(
-        "(muhe ((f (mita (x) (celi x 1))))) \
-         (tido ((f (mita (x) (celi x 2)))) (f 5))",
+        "(sada ((f (muhe (x) (celi x 1))))) \
+         (zido ((f (muhe (x) (celi x 2)))) (f 5))",
     );
     assert_eq!(out, "7\n");
 }
@@ -279,7 +279,7 @@ fn local_lambda_shadows_builtin() {
     if !tools_available() {
         return;
     }
-    let out = run_program("(tido ((celi (mita (x) (celida x x)))) (celi 5))");
+    let out = run_program("(zido ((celi (muhe (x) (kuzi x x)))) (celi 5))");
     assert_eq!(out, "25\n");
 }
 

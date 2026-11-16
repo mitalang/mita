@@ -30,17 +30,17 @@ fn test_vm_add() {
 
 #[test]
 fn test_vm_sub() {
-    assert_eq!(eval_vm("(movo 5 3)"), "2");
+    assert_eq!(eval_vm("(lata 5 3)"), "2");
 }
 
 #[test]
 fn test_vm_mul() {
-    assert_eq!(eval_vm("(celida 4 5)"), "20");
+    assert_eq!(eval_vm("(kuzi 4 5)"), "20");
 }
 
 #[test]
 fn test_vm_div() {
-    assert_eq!(eval_vm("(movoda 10 2)"), "5");
+    assert_eq!(eval_vm("(gusha 10 2)"), "5");
 }
 
 #[test]
@@ -57,17 +57,17 @@ fn test_vm_if() {
 
 #[test]
 fn test_vm_let() {
-    assert_eq!(eval_vm("(tido ((x 1) (y 2)) (celi x y))"), "3");
+    assert_eq!(eval_vm("(zido ((x 1) (y 2)) (celi x y))"), "3");
 }
 
 #[test]
 fn test_vm_lambda() {
-    assert_eq!(eval_vm("((mita (x) (celi x 1)) 5)"), "6");
+    assert_eq!(eval_vm("((muhe (x) (celi x 1)) 5)"), "6");
 }
 
 #[test]
 fn test_vm_tail_call() {
-    let code = "(muhe ((fak_tco (mita (n acc) (ka (shato n unu) acc (fak_tco (movo n unu) (celida n acc))))))) (fak_tco 5 1)";
+    let code = "(sada ((fak_tco (muhe (n acc) (ka (shato n unu) acc (fak_tco (lata n unu) (kuzi n acc))))))) (fak_tco 5 1)";
     assert_eq!(eval_vm(code), "120");
 }
 
@@ -98,12 +98,12 @@ fn test_vm_progn() {
 
 #[test]
 fn test_vm_nested_calls() {
-    assert_eq!(eval_vm("(celi (movo 5 3) (celida 2 4))"), "10");
+    assert_eq!(eval_vm("(celi (lata 5 3) (kuzi 2 4))"), "10");
 }
 
 #[test]
 fn test_vm_higher_order() {
-    let code = "((mita (f) (f 5)) (mita (x) (celi x x)))";
+    let code = "((muhe (f) (f 5)) (muhe (x) (celi x x)))";
     assert_eq!(eval_vm(code), "10");
 }
 

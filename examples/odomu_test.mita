@@ -12,19 +12,19 @@
 (kuchakucha '(1 2 3)) ; => (3)
 
 ; sada
-(sada 1 2 3) ; => (1 2 3)
+(tiga 1 2 3) ; => (1 2 3)
 
 ; tiga
-(tiga '(1 2 3)) ; => 3
+(tigamani '(1 2 3)) ; => 3
 
 ; si
-(si (mita (x) (celi x x)) '(1 2 3)) ; => (2 4 6)
+(si (muhe (x) (celi x x)) '(1 2 3)) ; => (2 4 6)
 
 ; valo
-(valo (mita (x) (aba x du)) '(1 2 3)) ; => (1)
+(valo (muhe (x) (aba x du)) '(1 2 3)) ; => (1)
 
 ; mosi
-(mosi (mita (a b) (celi a b)) 0 '(1 2 3)) ; => 6
+(mosi (muhe (a b) (celi a b)) 0 '(1 2 3)) ; => 6
 
 ; tomo
 (tomo '(1 2) '(3 4)) ; => (1 2 3 4)
@@ -39,13 +39,13 @@
 (odomu 'a '(b a c)) ; => da
 
 ; zido
-(zido '(1 2 3)) ; => 3
+(untasi '(1 2 3)) ; => 3
 
 ; eleka
 (eleka 1 '(a b c)) ; => b
 
 ; kuzi
-(kuzi da da nye) ; => nye
+(kuzitomo da da nye) ; => nye
 
 ; todo
 (todo nye da nye) ; => da
@@ -54,7 +54,7 @@
 (biat da) ; => nye
 
 ; kundala
-(kundala 'a '(a b a c)) ; => (b c)
+(ika 'a '(a b a c)) ; => (b c)
 
 ; pupu
-(pupu '((1 2) (3 (4 5)))) ; => (1 2 3 4 5) 
+(tigakundala '((1 2) (3 (4 5)))) ; => (1 2 3 4 5)

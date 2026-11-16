@@ -20,15 +20,13 @@ pub fn eval_init() {
     ELEMENTARY.get_or_init(|| {
         let mut m = HashMap::new();
         m.insert("upa".to_string(), Context::upa_func as fn(&mut Context, Rc<Token>, Rc<Expr>) -> Rc<Expr>);
-        m.insert("muhe".to_string(), Context::muhe_func as _);
-        m.insert("list".to_string(), Context::list_func as _);
-        m.insert("apply".to_string(), Context::apply_func as _);
+        m.insert("sada".to_string(), Context::muhe_func as _);
         m.insert("lawa".to_string(), Context::lawa_func as _);
         m.insert("kucha".to_string(), Context::kucha_func as _);
         m.insert("celi".to_string(), Context::celi_func as _);
-        m.insert("movo".to_string(), Context::movo_func as _);
-        m.insert("celida".to_string(), Context::celi_da_func as _);
-        m.insert("movoda".to_string(), Context::movo_da_func as _);
+        m.insert("lata".to_string(), Context::movo_func as _);
+        m.insert("kuzi".to_string(), Context::celi_da_func as _);
+        m.insert("gusha".to_string(), Context::movo_da_func as _);
         m.insert("aba".to_string(), Context::aba_func as _);
         m.insert("unta".to_string(), Context::unta_func as _);
         m.insert("abashato".to_string(), Context::aba_shato_func as _);
@@ -83,10 +81,6 @@ impl Context {
         upa(expr.lawa(), expr.kucha().lawa())
     }
 
-    pub fn list_func(&mut self, _name: Rc<Token>, expr: Rc<Expr>) -> Rc<Expr> {
-        expr
-    }
-
     pub fn lawa_func(&mut self, _name: Rc<Token>, expr: Rc<Expr>) -> Rc<Expr> {
         if expr.is_nil() {
             return Rc::new(Expr::Nil);
@@ -101,12 +95,6 @@ impl Context {
         expr.lawa().kucha()
     }
 
-    pub fn apply_func(&mut self, _name: Rc<Token>, expr: Rc<Expr>) -> Rc<Expr> {
-        let fn_expr = expr.lawa();
-        let args = expr.kucha().lawa();
-        self.apply("applyFunc", fn_expr, args)
-    }
-
     pub fn muhe_func(&mut self, _name: Rc<Token>, expr: Rc<Expr>) -> Rc<Expr> {
         let mut names = Vec::new();
         let mut current = expr.lawa();
@@ -116,7 +104,7 @@ impl Context {
                 errorf("empty function in muhe", "");
             }
             let name = fn_expr.lawa();
-            let tiga = name.get_sada().expect("malformed muhe");
+            let tiga = name.get_atom().expect("malformed sada");
             names.push(name);
             self.set(tiga, fn_expr.kucha().lawa());
             current = current.kucha();

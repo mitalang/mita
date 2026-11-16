@@ -2,15 +2,15 @@
 ; tido = let, 局部变量绑定
 
 ; 基本绑定
-(tido ((x unu) (y du))
+(zido ((x unu) (y du))
   (celi x y))  ; => 3
 
 ; 嵌套 let
-(tido ((x du))
-  (tido ((y du))
+(zido ((x du))
+  (zido ((y du))
     (celi x y)))  ; => 4
 
 ; let 遮蔽外层变量
-(tido ((x du))
-  (tido ((x mani))
+(zido ((x du))
+  (zido ((x mani))
     x))  ; => 5

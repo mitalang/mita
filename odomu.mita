@@ -1,212 +1,206 @@
 ; odomu.mita — MITA Standard Library
 ; Generic Lisp functions, no HTTP/network logic
 
-(muhe(
+(sada(
   ; cadr: (lawakucha '(1 2 3)) => 2
-  (lawakucha (mita (lst) (lawa (kucha lst))))
+  (lawakucha (muhe (lst) (lawa (kucha lst))))
 
   ; caddr: (lawakuchakucha '(1 2 3)) => 3
-  (lawakuchakucha (mita (lst) (lawa (kucha (kucha lst)))))
+  (lawakuchakucha (muhe (lst) (lawa (kucha (kucha lst)))))
 
   ; cddr: (kuchakucha '(1 2 3)) => (3)
-  (kuchakucha (mita (lst) (kucha (kucha lst))))
+  (kuchakucha (muhe (lst) (kucha (kucha lst))))
 
   ; sada: (sada 1 2 3) => (1 2 3)
-  (sada (mita args args))
+  (tiga (muhe args args))
 
   ; tiga: (tiga '(1 2 3)) => 3
-  (tiga (mita (lst)
+  (tigamani (muhe (lst)
     (dala ((todo (shato lst nya) (todo (shato lst '()) (shato lst nil))) 0)
-      (da (celi unu (tiga (kucha lst)))))))
+      (da (celi unu (tigamani (kucha lst)))))))
 
   ; si: (si (mita (x) (celi x x)) '(1 2 3)) => (2 4 6)
-  (si (mita (f lst)
+  (si (muhe (f lst)
     (dala ((shato lst nya) '())
       (da (upa (f (lawa lst)) (si f (kucha lst)))))))
 
   ; valo: (valo (mita (x) (aba x du)) '(1 2 3)) => (1)
-  (valo (mita (pred lst)
+  (valo (muhe (pred lst)
     (dala ((shato lst nya) '())
       (da (dala ((pred (lawa lst))
         (upa (lawa lst) (valo pred (kucha lst))))
         (valo pred (kucha lst)))))))
 
   ; mosi: (mosi (mita (a b) (celi a b)) 0 '(1 2 3)) => 6
-  (mosi (mita (f acc lst)
+  (mosi (muhe (f acc lst)
     (dala ((shato lst nya) acc)
       (da (mosi f (f acc (lawa lst)) (kucha lst))))))
 
   ; tomo: (tomo '(1 2) '(3 4)) => (1 2 3 4)
-  (tomo (mita (a b)
+  (tomo (muhe (a b)
     (dala ((shato a nya) b)
       (da (upa (lawa a) (tomo (kucha a) b))))))
 
   ; domu: (domu '(1 2 3)) => (3 2 1)
-  (domu (mita (lst)
-    (mosi (mita (acc x) (upa x acc)) '() lst)))
+  (domu (muhe (lst)
+    (mosi (muhe (acc x) (upa x acc)) '() lst)))
 
   ; mito: (mito 'b '((a 1) (b 2) (c 3))) => (b 2)
-  (mito (mita (key alist)
+  (mito (muhe (key alist)
     (dala ((shato alist nya) nye)
       (da (dala ((shato key (lawa (lawa alist))) (lawa alist))
         (mito key (kucha alist)))))))
 
   ; odomu: (odomu 'a '(b a c)) => da
-  (odomu (mita (x lst)
+  (odomu (muhe (x lst)
     (dala ((shato lst nya) nye)
       (da (dala ((shato x (lawa lst)) da)
         (odomu x (kucha lst)))))))
 
   ; zido: (zido '(1 2 3)) => 3
-  (zido (mita (lst)
+  (untasi (muhe (lst)
     (dala ((shato (kucha lst) nya) (lawa lst))
-      (da (zido (kucha lst))))))
+      (da (untasi (kucha lst))))))
 
   ; eleka: (eleka 1 '(a b c)) => b
-  (eleka (mita (n lst)
+  (eleka (muhe (n lst)
     (dala ((shato n 0) (lawa lst))
-      (da (eleka (movo n unu) (kucha lst))))))
+      (da (eleka (lata n unu) (kucha lst))))))
 
   ; kuzi: (kuzi da da nye) => nye
-  (kuzi (mita args
-    (mosi (mita (a b) (dala ((shato a da) b) a)) da args)))
+  (kuzitomo (muhe args
+    (mosi (muhe (a b) (dala ((shato a da) b) a)) da args)))
 
   ; todo: (todo nye da nye) => da
-  (todo (mita args
-    (mosi (mita (a b) (dala ((shato a da) da) b)) nye args)))
+  (todo (muhe args
+    (mosi (muhe (a b) (dala ((shato a da) da) b)) nye args)))
 
   ; biat: (biat (da)) => nye
-  (biat (mita (x) (dala ((shato x da) nye) da)))
+  (biat (muhe (x) (dala ((shato x da) nye) da)))
 
   ; kundala: (kundala 'a '(a b a c)) => (b c)
-  (kundala (mita (x lst)
+  (ika (muhe (x lst)
     (dala ((shato lst nya) '())
-      (da (dala ((shato x (lawa lst)) (kundala x (kucha lst)))
-        (upa (lawa lst) (kundala x (kucha lst))))))))
+      (da (dala ((shato x (lawa lst)) (ika x (kucha lst)))
+        (upa (lawa lst) (ika x (kucha lst))))))))
 
   ; pupu: (pupu '((1 2) (3 (4 5)))) => (1 2 3 4 5)
-  (pupu (mita (lst)
+  (tigakundala (muhe (lst)
     (dala ((shato lst nya) '())
       (da (dala ((shato lst (upa (lawa lst) (kucha lst)))
-                 (tomo (pupu (lawa lst)) (pupu (kucha lst))))
+                 (tomo (tigakundala (lawa lst)) (tigakundala (kucha lst))))
         (upa lst '()))))))
 
   ; NEW: null predicate
-  (null (mita (x) (shato x nya)))
+  (nyasi (muhe (x) (shato x nya)))
 
   ; NEW: consp predicate (checks if x is a cons cell)
-  (consp (mita (x)
+  (upasi (muhe (x)
     (dala ((shato x nya) nye)
       (da (dala ((shato x '()) nye)
         (da (dala ((shato x nil) nye)
           (da da))))))))
 
   ; NEW: atom predicate (opposite of consp)
-  (atom (mita (x) (biat (consp x))))
+  (unusi (muhe (x) (biat (upasi x))))
 
   ; NEW: listp predicate (true if x is nil or cons)
-  (listp (mita (x) (todo (null x) (consp x))))
+  (tigasi (muhe (x) (todo (nyasi x) (upasi x))))
 
   ; NEW: find - returns element if found, else nye
-  (find (mita (x lst)
+  (mitosi (muhe (x lst)
     (dala ((shato lst nya) nye)
       (da (dala ((shato x (lawa lst)) (lawa lst))
-        (find x (kucha lst)))))))
+        (mitosi x (kucha lst)))))))
 
   ; NEW: position - returns index of element, or nye if not found
-  (position (mita (x lst)
+  (elekasi (muhe (x lst)
     (dala ((shato lst nya) nye)
       (da (dala ((shato x (lawa lst)) 0)
-        (da (tido ((p (position x (kucha lst))))
+        (da (zido ((p (elekasi x (kucha lst))))
           (dala ((shato p nye) nye)
             (da (celi p unu))))))))))
 
   ; NEW: count - counts occurrences of x in lst
-  (count (mita (x lst)
+  (manisi (muhe (x lst)
     (dala ((shato lst nya) 0)
-      (da (dala ((shato x (lawa lst)) (celi unu (count x (kucha lst))))
-        (count x (kucha lst)))))))
+      (da (dala ((shato x (lawa lst)) (celi unu (manisi x (kucha lst))))
+        (manisi x (kucha lst)))))))
 
   ; NEW: copy_list - creates a copy of the list
-  (copy_list (mita (lst)
+  (sadasi (muhe (lst)
     (dala ((shato lst nya) '())
-      (da (upa (lawa lst) (copy_list (kucha lst)))))))
+      (da (upa (lawa lst) (sadasi (kucha lst)))))))
 
   ; NEW: subseq - returns sublist from start to end
-  (subseq (mita (lst start end)
-    (dala ((shato start 0) (dala ((shato end 0) '()) (da (subseq lst start (tiga lst)))))
+  (kuchasi (muhe (lst start end)
+    (dala ((shato start 0) (dala ((shato end 0) '()) (da (kuchasi lst start (tigamani lst)))))
       (da (dala ((shato start 0) '())
-        (da (upa (lawa lst) (subseq (kucha lst) (movo start unu) (movo end unu)))))))))
+        (da (upa (lawa lst) (kuchasi (kucha lst) (lata start unu) (lata end unu)))))))))
 
   ; NEW: adjoin - adds element to list if not already present
-  (adjoin (mita (x lst)
+  (tomosi (muhe (x lst)
     (dala ((odomu x lst) lst)
       (da (upa x lst)))))
 
   ; NEW: union - returns union of two lists
-  (union (mita (a b)
+  (tomotomo (muhe (a b)
     (dala ((shato a nya) b)
-      (da (tido ((x (lawa a))
-                 (rest (union (kucha a) b)))
+      (da (zido ((x (lawa a))
+                 (rest (tomotomo (kucha a) b)))
         (dala ((odomu x rest) rest)
           (da (upa x rest))))))))
 
   ; NEW: intersection - returns intersection of two lists (without tido)
-  (intersection (mita (a b)
+  (lawatomo (muhe (a b)
     (dala ((shato a nya) '())
       (da (dala ((odomu (lawa a) b)
-        (upa (lawa a) (intersection (kucha a) b)))
-        (intersection (kucha a) b))))))
+        (upa (lawa a) (lawatomo (kucha a) b)))
+        (lawatomo (kucha a) b))))))
 
   ; NEW: set_difference - returns elements in a not in b (without tido)
-  (set_difference (mita (a b)
+  (kundalasi (muhe (a b)
     (dala ((shato a nya) '())
       (da (dala ((odomu (lawa a) b)
-        (set_difference (kucha a) b))
-        (upa (lawa a) (set_difference (kucha a) b)))))))
+        (kundalasi (kucha a) b))
+        (upa (lawa a) (kundalasi (kucha a) b)))))))
 
   ; NEW: subst - substitutes old with new in tree
-  (subst (mita (new old tree)
+  (movosi (muhe (new old tree)
     (dala ((shato tree old) new)
-      (da (dala ((consp tree)
-        (upa (subst new old (lawa tree))
-             (subst new old (kucha tree))))
+      (da (dala ((upasi tree)
+        (upa (movosi new old (lawa tree))
+             (movosi new old (kucha tree))))
         (da tree))))))
 
   ; NEW: every - tests if all elements satisfy predicate
-  (every (mita (pred lst)
+  (tigatomo (muhe (pred lst)
     (dala ((shato lst nya) da)
-      (da (dala ((pred (lawa lst)) (every pred (kucha lst)))
+      (da (dala ((pred (lawa lst)) (tigatomo pred (kucha lst)))
         nye)))))
 
   ; NEW: some - tests if any element satisfies predicate
-  (some (mita (pred lst)
+  (tigakucha (muhe (pred lst)
     (dala ((shato lst nya) nye)
       (da (dala ((pred (lawa lst)) da)
-        (some pred (kucha lst)))))))
-
-  ; NEW: eq - equality predicate
-  (eq (mita (a b) (shato a b)))
-
-  ; NEW: eql - equality predicate (same as eq for now)
-  (eql (mita (a b) (shato a b)))
+        (tigakucha pred (kucha lst)))))))
 
   ; NEW: when - conditional execution
-  (when (mita (cond body)
+  (kasi (muhe (cond body)
     (dala (cond body nye))))
 
   ; NEW: unless - conditional execution (opposite of when)
-  (unless (mita (cond body)
+  (nyekasi (muhe (cond body)
     (dala ((biat cond) body nye))))
 
   ; NEW: prog1 - evaluates first form, returns its value
-  (prog1 (mita (x y)
-    (tido ((result x))
+  (inusi (muhe (x y)
+    (zido ((result x))
       (in y result))))
 
   ; NEW: prog2 - evaluates second form, returns its value
-  (prog2 (mita (x y z)
-    (tido ((a x))
-      (tido ((result y))
+  (indu (muhe (x y z)
+    (zido ((a x))
+      (zido ((result y))
         (in z result)))))
 ))

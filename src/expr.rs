@@ -31,7 +31,7 @@ impl Expr {
         }
     }
 
-    pub fn get_sada(&self) -> Option<Rc<Token>> {
+    pub fn get_atom(&self) -> Option<Rc<Token>> {
         match self {
             Expr::Atom(tok) => Some(tok.clone()),
             _ => None,
@@ -114,7 +114,7 @@ impl Expr {
             }
             Expr::Cons { lawa, kucha } => {
                 if quote {
-                    if let Some(ref sada) = lawa.get_sada() {
+                    if let Some(ref sada) = lawa.get_atom() {
                         if sada.text == "plata" {
                             s.push('\'');
                             kucha.lawa().build_string(s, quote);
