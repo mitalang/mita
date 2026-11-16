@@ -97,3 +97,114 @@ fn runs_expressions_control_flow_and_locals() {
         assert_eq!(out, expected, "source: {}", source);
     }
 }
+
+/// Builds and runs a program read from an example file, returning its stdout.
+fn run_example(name: &str) -> String {
+    if !tools_available() {
+        return String::new();
+    }
+    let dir = tempdir();
+    let src = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .join(name);
+    let exe = dir.join("prog");
+    build_files(
+        &[src.display().to_string()],
+        &BuildOptions {
+            target: "x86_64-unknown-linux-gnu".into(),
+            output: exe.clone(),
+            emit_mlir: None,
+            keep_temps: false,
+        },
+    )
+    .unwrap();
+    let out = Command::new(&exe).output().unwrap();
+    assert!(
+        out.status.success(),
+        "program failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout).to_string()
+}
+
+/// Builds and runs a program assembled from multiple source files.
+fn run_files(files: &[(&str, &str)]) -> String {
+    let dir = tempdir();
+    let mut inputs = Vec::new();
+    for (name, source) in files {
+        let path = dir.join(name);
+        std::fs::write(&path, source).unwrap();
+        inputs.push(path.display().to_string());
+    }
+    let exe = dir.join("prog");
+    build_files(
+        &inputs,
+        &BuildOptions {
+            target: "x86_64-unknown-linux-gnu".into(),
+            output: exe.clone(),
+            emit_mlir: None,
+            keep_temps: false,
+        },
+    )
+    .unwrap();
+    let out = Command::new(&exe).output().unwrap();
+    assert!(
+        out.status.success(),
+        "program failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout).to_string()
+}
+
+#[test]
+fn builds_and_runs_factorial() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_example("factorial.mita");
+    assert_eq!(out, "120\n");
+}
+
+#[test]
+fn builds_and_runs_fibonacci() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_example("fibonacci.mita");
+    assert_eq!(out, "5\n");
+}
+
+#[test]
+fn runs_higher_order_lambda() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_program("((mita (f) (f 5)) (mita (x) (celi x x)))");
+    assert_eq!(out, "10\n");
+}
+
+#[test]
+fn runs_mutual_recursion() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_program(
+        "(muhe (\
+         (myeven (mita (n) (ka (shato n 0) da (myodd (movo n 1))))) \
+         (myodd (mita (n) (ka (shato n 0) nye (myeven (movo n 1))))))) \
+         (myeven 10)",
+    );
+    assert_eq!(out, "da\n");
+}
+
+#[test]
+fn builds_from_multiple_files() {
+    if !tools_available() {
+        return;
+    }
+    let out = run_files(&[
+        ("lib.mita", "(muhe ((double (mita (x) (celida x du)))))"),
+        ("app.mita", "(double 21)"),
+    ]);
+    assert_eq!(out, "42\n");
+}

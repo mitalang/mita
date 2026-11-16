@@ -8,8 +8,10 @@
 //!
 //! Scope: integer/string/quote literals, `celi/movo/celida/movoda`,
 //! comparisons, `upa/lawa/kucha`, `ka`, `dala`, `tido`, `in`, `plama`,
-//! `plata`, `print`, top-level sequencing, and an automatic print of the
-//! final top-level result, mirroring the interpreter's `load()`.
+//! `plata`, `print`, top-level sequencing, an automatic print of the final
+//! top-level result (mirroring the interpreter's `load()`), fixed-arity
+//! `muhe` functions with two-phase name resolution, non-capturing `mita`
+//! lambdas, and closure creation / dynamic calls through `mita_call`.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -41,27 +43,82 @@ const DECLS: &[&str] = &[
     "llvm.func @mita_print_value(!llvm.struct<(i64, i64)>) -> !llvm.struct<(i64, i64)>",
     "llvm.func @mita_string(!llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
     "llvm.func @mita_symbol(!llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
+    "llvm.func @mita_make_closure(!llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
+    "llvm.func @mita_call(!llvm.struct<(i64, i64)>, !llvm.ptr, i64) -> !llvm.struct<(i64, i64)>",
 ];
+
+/// A parsed function definition pending compilation.
+struct FnDef {
+    /// MLIR symbol name including the leading `@` (e.g. `@fak`, `@lambda0`).
+    name: String,
+    params: Vec<String>,
+    body: Rc<Expr>,
+    /// Names of enclosing locals at the definition site. Referencing any of
+    /// these from the body is an upvalue capture and a compile error.
+    banned: Vec<String>,
+}
+
+/// Module-wide state shared across every emitted function.
+struct Shared {
+    next: usize,
+    block_next: usize,
+    globals: Vec<String>,
+    seen_strings: HashMap<String, String>,
+    /// `muhe` function source name (no `@`) -> arity, for direct calls and
+    /// closure construction.
+    known_fns: HashMap<String, usize>,
+    lambda_count: usize,
+    /// Lambdas discovered while compiling a body, awaiting their own body.
+    lambda_queue: Vec<FnDef>,
+}
+
+/// Per-function compilation state.
+struct FnCtx<'a> {
+    shared: &'a mut Shared,
+    /// Entry-block `llvm.alloca`s, emitted before the instruction stream so
+    /// every slot dominates its uses across branches.
+    prologue: String,
+    /// The instruction stream (entry block then any branch blocks).
+    body: String,
+    /// Lexical variable scopes, mapping a name to its alloca slot SSA name.
+    scopes: Vec<HashMap<String, String>>,
+    /// Capturing any of these names is a compile error (lambda bodies only).
+    banned: Vec<String>,
+}
 
 /// Builds the `module { ... }` text for the given top-level expressions.
 pub fn compile(exprs: &[Rc<Expr>]) -> Result<String, String> {
-    let mut gen = Codegen::new();
+    // Phase 1: scan every top-level `muhe` and collect function definitions
+    // and names, so bodies (and top-level calls) can forward-reference them.
+    let (mut worklist, known_fns) = collect_muhe(exprs)?;
 
-    let mut last: Option<String> = None;
-    for expr in exprs {
-        last = Some(gen.gen_expr(expr)?);
+    let mut shared = Shared {
+        next: 0,
+        block_next: 0,
+        globals: Vec::new(),
+        seen_strings: HashMap::new(),
+        known_fns,
+        lambda_count: 0,
+        lambda_queue: Vec::new(),
+    };
+
+    let mut functions: Vec<String> = Vec::new();
+
+    // Compile `main` first: it may discover lambdas, which are queued and then
+    // compiled alongside the `muhe` bodies below. Function definitions may be
+    // emitted in any order; MLIR resolves `llvm.call` symbols module-wide.
+    let main = compile_main(&mut shared, exprs)?;
+
+    loop {
+        let def = match worklist.pop() {
+            Some(d) => Some(d),
+            None => shared.lambda_queue.pop(),
+        };
+        let Some(def) = def else { break };
+        emit_function(&mut shared, def, &mut functions)?;
     }
 
-    // Auto-print the final top-level result, like the interpreter's `load()`.
-    if let Some(result) = last {
-        gen.emit_print_value(&result);
-    }
-
-    let zero = gen.fresh();
-    gen.body
-        .push_str(&format!("    {} = llvm.mlir.constant(0 : i32) : i32\n", zero));
-    gen.body
-        .push_str(&format!("    llvm.return {} : i32\n", zero));
+    functions.push(main);
 
     let mut out = String::new();
     out.push_str("module {\n");
@@ -70,65 +127,185 @@ pub fn compile(exprs: &[Rc<Expr>]) -> Result<String, String> {
         out.push_str(decl);
         out.push('\n');
     }
-    for global in &gen.globals {
+    for global in &shared.globals {
         out.push_str("  ");
         out.push_str(global);
         out.push('\n');
     }
-    out.push_str("  llvm.func @main() -> i32 {\n");
-    out.push_str(&gen.prologue);
-    out.push_str(&gen.body);
-    out.push_str("  }\n");
+    for func in &functions {
+        out.push_str(func);
+    }
     out.push_str("}\n");
 
     Ok(out)
 }
 
-struct Codegen {
-    next: usize,
-    block_next: usize,
-    globals: Vec<String>,
-    seen_strings: HashMap<String, String>,
-    /// Entry-block `llvm.alloca`s, emitted before the instruction stream so
-    /// every slot dominates its uses across branches.
-    prologue: String,
-    /// The main instruction stream (entry block then any branch blocks).
-    body: String,
-    /// Lexical variable scopes, mapping a name to its alloca slot SSA name.
-    scopes: Vec<HashMap<String, String>>,
+/// Scans top-level `muhe` forms and returns their parsed definitions plus a
+/// source-name -> arity map.
+fn collect_muhe(exprs: &[Rc<Expr>]) -> Result<(Vec<FnDef>, HashMap<String, usize>), String> {
+    let mut fns = Vec::new();
+    let mut known = HashMap::new();
+    for expr in exprs {
+        let Expr::Cons { lawa, kucha } = expr.as_ref() else {
+            continue;
+        };
+        let Some(tok) = lawa.get_sada() else {
+            continue;
+        };
+        if tok.text != "muhe" {
+            continue;
+        }
+        let defs = kucha.lawa();
+        let mut current = defs;
+        while let Expr::Cons { lawa: def, kucha: rest } = current.as_ref() {
+            let name_tok = def
+                .lawa()
+                .get_sada()
+                .ok_or_else(|| "muhe: expected function name".to_string())?;
+            let name = name_tok.text.clone();
+            let lambda = def.kucha().lawa();
+            let (params, body) = parse_lambda(&lambda)?;
+            let arity = params.len();
+            known.insert(name.clone(), arity);
+            fns.push(FnDef {
+                name: format!("@{}", name),
+                params,
+                body,
+                banned: Vec::new(),
+            });
+            current = rest.clone();
+        }
+    }
+    Ok((fns, known))
 }
 
-impl Codegen {
-    fn new() -> Self {
-        Codegen {
-            next: 0,
-            block_next: 0,
-            globals: Vec::new(),
-            seen_strings: HashMap::new(),
+/// Parses `(mita (params...) body)` into its parameter names and body form.
+fn parse_lambda(lambda: &Rc<Expr>) -> Result<(Vec<String>, Rc<Expr>), String> {
+    let formals = lambda.kucha().lawa();
+    let body = lambda.kucha().kucha().lawa();
+    let params = parse_formals(&formals)?;
+    Ok((params, body))
+}
+
+/// Extracts a fixed-arity parameter list from a lambda formal list.
+fn parse_formals(formals: &Rc<Expr>) -> Result<Vec<String>, String> {
+    match formals.as_ref() {
+        Expr::Atom(_) => Err("variadic lambda not supported".to_string()),
+        Expr::Nil => Ok(Vec::new()),
+        Expr::Cons { .. } => {
+            let mut params = Vec::new();
+            let mut f = formals.clone();
+            while let Expr::Cons { lawa, kucha } = f.as_ref() {
+                let tok = lawa
+                    .get_sada()
+                    .ok_or_else(|| "lambda: expected parameter name".to_string())?;
+                params.push(tok.text.clone());
+                f = kucha.clone();
+            }
+            Ok(params)
+        }
+    }
+}
+
+/// Compiles the `main` function: runs each top-level expression in order
+/// (skipping `muhe`), auto-prints the final result, and returns 0.
+fn compile_main(shared: &mut Shared, exprs: &[Rc<Expr>]) -> Result<String, String> {
+    let mut ctx = FnCtx::new(shared, Vec::new());
+
+    let mut last: Option<String> = None;
+    for expr in exprs {
+        if is_muhe(expr) {
+            continue;
+        }
+        last = Some(ctx.gen_expr(expr)?);
+    }
+
+    if let Some(result) = last {
+        ctx.emit_print_value(&result);
+    }
+
+    let zero = ctx.fresh();
+    ctx.body
+        .push_str(&format!("    {} = llvm.mlir.constant(0 : i32) : i32\n", zero));
+    ctx.body
+        .push_str(&format!("    llvm.return {} : i32\n", zero));
+
+    let mut s = String::new();
+    s.push_str("  llvm.func @main() -> i32 {\n");
+    s.push_str(&ctx.prologue);
+    s.push_str(&ctx.body);
+    s.push_str("  }\n");
+    Ok(s)
+}
+
+fn is_muhe(expr: &Rc<Expr>) -> bool {
+    match expr.as_ref() {
+        Expr::Cons { lawa, .. } => lawa
+            .get_sada()
+            .map(|t| t.text == "muhe")
+            .unwrap_or(false),
+        _ => false,
+    }
+}
+
+/// Compiles one function (a `muhe` def or a lambda) into a full `llvm.func`.
+fn emit_function(shared: &mut Shared, def: FnDef, out: &mut Vec<String>) -> Result<(), String> {
+    let mut ctx = FnCtx::new(shared, def.banned);
+
+    // Map each parameter to an alloca slot and load it from the args array.
+    for (i, pname) in def.params.iter().enumerate() {
+        let slot = ctx.alloca_value();
+        ctx.scopes[0].insert(pname.clone(), slot.clone());
+        let gep = ctx.emit_gep("%args", i);
+        let val = ctx.emit_load(&gep);
+        ctx.emit_store(&slot, &val);
+    }
+
+    let result = ctx.gen_expr(&def.body)?;
+    ctx.body
+        .push_str(&format!("    llvm.return {} : {}\n", result, VALUE_TY));
+
+    let mut s = String::new();
+    s.push_str(&format!(
+        "  llvm.func {}(%args: !llvm.ptr, %argc: i64) -> {} {{\n",
+        def.name, VALUE_TY
+    ));
+    s.push_str(&ctx.prologue);
+    s.push_str(&ctx.body);
+    s.push_str("  }\n");
+    out.push(s);
+    Ok(())
+}
+
+impl<'a> FnCtx<'a> {
+    fn new(shared: &'a mut Shared, banned: Vec<String>) -> Self {
+        FnCtx {
+            shared,
             prologue: String::new(),
             body: String::new(),
             scopes: vec![HashMap::new()],
+            banned,
         }
     }
 
     fn fresh(&mut self) -> String {
-        let name = format!("%{}", self.next);
-        self.next += 1;
+        let name = format!("%{}", self.shared.next);
+        self.shared.next += 1;
         name
     }
 
     fn fresh_block(&mut self) -> String {
-        let name = format!("^bb{}", self.block_next);
-        self.block_next += 1;
+        let name = format!("^bb{}", self.shared.block_next);
+        self.shared.block_next += 1;
         name
     }
 
     /// Returns (or creates) the global name holding `content` as a byte array.
     fn intern_string(&mut self, content: &str) -> String {
-        if let Some(name) = self.seen_strings.get(content) {
+        if let Some(name) = self.shared.seen_strings.get(content) {
             return name.clone();
         }
-        let name = format!("@str{}", self.globals.len());
+        let name = format!("@str{}", self.shared.globals.len());
         let escaped = escape_mlir_string(content);
         let global = format!(
             "llvm.mlir.global internal constant {}(\"{}\") {{addr_space = 0 : i32}} : !llvm.array<{} x i8>",
@@ -136,8 +313,10 @@ impl Codegen {
             escaped,
             content.len()
         );
-        self.globals.push(global);
-        self.seen_strings.insert(content.to_string(), name.clone());
+        self.shared.globals.push(global);
+        self.shared
+            .seen_strings
+            .insert(content.to_string(), name.clone());
         name
     }
 
@@ -159,6 +338,16 @@ impl Codegen {
             slot, cnt, VALUE_TY
         ));
         slot
+    }
+
+    /// Emits an `i64` constant, returning its SSA name.
+    fn emit_const_i64(&mut self, v: i64) -> String {
+        let name = self.fresh();
+        self.body.push_str(&format!(
+            "    {} = llvm.mlir.constant({} : i64) : i64\n",
+            name, v
+        ));
+        name
     }
 
     /// Emits `llvm.store` of `value` into slot `slot`.
@@ -218,6 +407,22 @@ impl Codegen {
         self.body.push_str(&format!(
             "    {} = llvm.call @{}({}) : ({}) -> {}\n",
             result, fname, a, VALUE_TY, VALUE_TY
+        ));
+        result
+    }
+
+    /// Creates a closure value wrapping the function `name` of `arity` args.
+    fn emit_closure(&mut self, name: &str, arity: usize) -> String {
+        let ptr = self.fresh();
+        self.body.push_str(&format!(
+            "    {} = llvm.mlir.addressof {} : !llvm.ptr\n",
+            ptr, name
+        ));
+        let arity_val = self.emit_const_i64(arity as i64);
+        let result = self.fresh();
+        self.body.push_str(&format!(
+            "    {} = llvm.call @mita_make_closure({}, {}) : (!llvm.ptr, i64) -> {}\n",
+            result, ptr, arity_val, VALUE_TY
         ));
         result
     }
@@ -344,12 +549,22 @@ impl Codegen {
                 _ => match tok.text.as_str() {
                     "nil" | "nya" | "da" | "nye" | "unu" | "du" | "unudu" | "dudu"
                     | "mani" => Ok(self.constant_value(&tok.text)),
-                    // Unbound atoms are symbols (falsy), matching the VM
-                    // compiler's `predefined_value(...).unwrap_or(Symbol)`.
-                    _ => match self.lookup_var(&tok.text) {
-                        Some(slot) => Ok(self.emit_load(&slot)),
-                        None => Ok(self.emit_symbol(&tok.text)),
-                    },
+                    // Name resolution: local slot -> known muhe -> capture
+                    // error -> unbound symbol (falsy, matching the VM).
+                    _ => {
+                        if let Some(slot) = self.lookup_var(&tok.text) {
+                            Ok(self.emit_load(&slot))
+                        } else if let Some(arity) = self.shared.known_fns.get(&tok.text).copied() {
+                            Ok(self.emit_closure(&format!("@{}", tok.text), arity))
+                        } else if self.banned.contains(&tok.text) {
+                            Err(format!(
+                                "lambda captures outer variable: {}",
+                                tok.text
+                            ))
+                        } else {
+                            Ok(self.emit_symbol(&tok.text))
+                        }
+                    }
                 },
             },
         }
@@ -357,11 +572,14 @@ impl Codegen {
 
     fn gen_call(&mut self, expr: &Expr) -> Result<String, String> {
         let head = expr.lawa();
+        let args = collect_args(expr.kucha());
+
         let name = match head.as_ref() {
             Expr::Atom(tok) => tok.text.clone(),
-            _ => return Err("call head must be an atom".to_string()),
+            // A non-atom head is a value (e.g. a lambda): dynamic call.
+            _ => return self.gen_dynamic_call(head, &args),
         };
-        let args = collect_args(expr.kucha());
+
         match name.as_str() {
             // Special forms.
             "plata" => {
@@ -378,8 +596,6 @@ impl Codegen {
             }
             "dala" => self.gen_cond(expr.kucha()),
             "tido" => {
-                // Tree/VM semantics: bindings = first arg, body = second arg;
-                // any trailing forms are ignored (tido takes a single body).
                 if args.len() < 2 {
                     return Err("tido expects bindings and a body".to_string());
                 }
@@ -387,6 +603,12 @@ impl Codegen {
             }
             "in" => self.gen_progn(expr.kucha()),
             "plama" => self.gen_setq(expr.kucha()),
+            "mita" => {
+                if args.len() < 2 {
+                    return Err("mita expects formals and a body".to_string());
+                }
+                self.gen_lambda(args[0].clone(), args[1].clone())
+            }
             // Arithmetic.
             "celi" => self.gen_binary(&args, "mita_add"),
             "movo" => self.gen_binary(&args, "mita_sub"),
@@ -405,8 +627,97 @@ impl Codegen {
             "kucha" => self.gen_unary(&args, "mita_cdr"),
             // Printing.
             "print" => self.gen_print(&args),
-            other => Err(format!("unsupported function: {}", other)),
+            other => {
+                if let Some(arity) = self.shared.known_fns.get(other).copied() {
+                    self.gen_direct_call(other, arity, &args)
+                } else if self.lookup_var(other).is_some() {
+                    self.gen_dynamic_call(head, &args)
+                } else {
+                    Err(format!("unsupported function: {}", other))
+                }
+            }
         }
+    }
+
+    /// A compile-time-known `muhe` function: direct `llvm.call @fn(args, argc)`.
+    fn gen_direct_call(
+        &mut self,
+        name: &str,
+        arity: usize,
+        args: &[Rc<Expr>],
+    ) -> Result<String, String> {
+        if args.len() != arity {
+            return Err(format!(
+                "{}: expected {} arguments, got {}",
+                name,
+                arity,
+                args.len()
+            ));
+        }
+        let mut vals = Vec::with_capacity(args.len());
+        for arg in args {
+            vals.push(self.gen_expr(arg)?);
+        }
+        let arr = self.alloca_array(vals.len());
+        for (i, val) in vals.iter().enumerate() {
+            let gep = self.emit_gep(&arr, i);
+            self.emit_store(&gep, val);
+        }
+        let argc = self.emit_const_i64(vals.len() as i64);
+        let result = self.fresh();
+        self.body.push_str(&format!(
+            "    {} = llvm.call @{}({}, {}) : (!llvm.ptr, i64) -> {}\n",
+            result, name, arr, argc, VALUE_TY
+        ));
+        Ok(result)
+    }
+
+    /// A runtime closure value (local var or expression): `mita_call(fn, args)`.
+    fn gen_dynamic_call(&mut self, head: Rc<Expr>, args: &[Rc<Expr>]) -> Result<String, String> {
+        // Evaluate args first, then the function position (matches the VM
+        // compiler's ordering).
+        let mut vals = Vec::with_capacity(args.len());
+        for arg in args {
+            vals.push(self.gen_expr(arg)?);
+        }
+        let fn_val = self.gen_expr(head.as_ref())?;
+
+        let arr = self.alloca_array(vals.len());
+        for (i, val) in vals.iter().enumerate() {
+            let gep = self.emit_gep(&arr, i);
+            self.emit_store(&gep, val);
+        }
+        let argc = self.emit_const_i64(vals.len() as i64);
+        let result = self.fresh();
+        self.body.push_str(&format!(
+            "    {} = llvm.call @mita_call({}, {}, {}) : ({}, !llvm.ptr, i64) -> {}\n",
+            result, fn_val, arr, argc, VALUE_TY, VALUE_TY
+        ));
+        Ok(result)
+    }
+
+    /// `mita` lambda: queue its body as a function and build a closure value.
+    fn gen_lambda(&mut self, formals: Rc<Expr>, body: Rc<Expr>) -> Result<String, String> {
+        let params = parse_formals(&formals)?;
+        let arity = params.len();
+
+        // Capture ban: any enclosing local is off-limits.
+        let banned: Vec<String> = self
+            .scopes
+            .iter()
+            .flat_map(|s| s.keys().cloned())
+            .collect();
+
+        let name = format!("@lambda{}", self.shared.lambda_count);
+        self.shared.lambda_count += 1;
+        self.shared.lambda_queue.push(FnDef {
+            name: name.clone(),
+            params,
+            body,
+            banned,
+        });
+
+        Ok(self.emit_closure(&name, arity))
     }
 
     fn gen_binary(&mut self, args: &[Rc<Expr>], fname: &str) -> Result<String, String> {
@@ -438,12 +749,7 @@ impl Codegen {
             let gep = self.emit_gep(&arr, i);
             self.emit_store(&gep, val);
         }
-        let argc = self.fresh();
-        self.body.push_str(&format!(
-            "    {} = llvm.mlir.constant({} : i64) : i64\n",
-            argc,
-            vals.len()
-        ));
+        let argc = self.emit_const_i64(vals.len() as i64);
         let result = self.fresh();
         self.body.push_str(&format!(
             "    {} = llvm.call @mita_print({}, {}) : (!llvm.ptr, i64) -> {}\n",

@@ -42,3 +42,17 @@ fn emits_string_global_and_constructor() {
     assert!(mlir.contains("llvm.mlir.global"));
     assert!(mlir.contains("@mita_string"));
 }
+
+#[test]
+fn emits_function_declarations_before_bodies() {
+    let mlir = compile_source("(muhe ((f (mita (x) x)))) (f 1)");
+    assert!(mlir.contains("@f"));
+    assert!(mlir.contains("llvm.func @f"));
+}
+
+#[test]
+fn emits_closure_creation() {
+    let mlir = compile_source("(tido ((f (mita (x) x))) (f 1))");
+    assert!(mlir.contains("@mita_make_closure"));
+    assert!(mlir.contains("@mita_call"));
+}
