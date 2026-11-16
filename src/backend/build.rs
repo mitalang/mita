@@ -89,18 +89,18 @@ pub fn build_files(inputs: &[String], opts: &BuildOptions) -> Result<(), String>
             "mlir-translate",
         )?;
 
-        run(
-            Command::new(&llc).args([
-                "-O2",
-                "-filetype=obj",
-                &format!("-mtriple={}", opts.target),
-                "-relocation-model=pic",
-                ll_path.to_str().unwrap(),
-                "-o",
-                obj_path.to_str().unwrap(),
-            ]),
-            "llc",
-        )?;
+        let mut llc_args = vec![
+            "-O2".to_string(),
+            "-filetype=obj".to_string(),
+            format!("-mtriple={}", opts.target),
+            "-relocation-model=pic".to_string(),
+        ];
+        llc_args.extend(llc_target_args(&opts.target));
+        llc_args.push(ll_path.to_str().unwrap().to_string());
+        llc_args.push("-o".to_string());
+        llc_args.push(obj_path.to_str().unwrap().to_string());
+
+        run(Command::new(&llc).args(&llc_args), "llc")?;
 
         run(
             Command::new(&cc).args([
@@ -178,13 +178,32 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
 }
 
 /// Maps a target triple to the C compiler used to build/link the runtime.
+///
+/// The runtime C and the generated object are both consumed by this compiler,
+/// so the whole pipeline is target-consistent (no host-cc leakage).
 fn cc_for_target(target: &str) -> Result<&'static str, String> {
     match target {
         "x86_64-unknown-linux-gnu" => Ok("cc"),
+        "aarch64-unknown-linux-gnu" => Ok("aarch64-linux-gnu-gcc"),
+        "riscv64-unknown-linux-gnu" => Ok("riscv64-linux-gnu-gcc"),
         other => Err(format!(
-            "target '{}' is not yet supported (only x86_64-unknown-linux-gnu)",
+            "target '{}' is not yet supported (supported: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, riscv64-unknown-linux-gnu)",
             other
         )),
+    }
+}
+
+/// Extra `llc` feature flags needed to match the target C compiler's default
+/// float ABI, so the generated object and the compiled runtime link cleanly.
+fn llc_target_args(target: &str) -> Vec<String> {
+    match target {
+        // Debian's `riscv64-linux-gnu-gcc` defaults to hard double-float
+        // (`-mabi=lp64d -march=rv64imafdc`), but LLVM's bare `riscv64` triple
+        // defaults to soft-float `rv64i`. The linker rejects the mismatch
+        // ("can't link soft-float modules with double-float modules"), so force
+        // the same feature set as the cross gcc.
+        "riscv64-unknown-linux-gnu" => vec!["-mattr=+m,+a,+f,+d,+c".to_string()],
+        _ => vec![],
     }
 }
 

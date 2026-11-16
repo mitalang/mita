@@ -229,3 +229,67 @@ fn local_lambda_shadows_builtin() {
     let out = run_program("(tido ((celi (mita (x) (celida x x)))) (celi 5))");
     assert_eq!(out, "25\n");
 }
+
+/// Cross builds are opt-in: only run when `MITA_TEST_CROSS=1` (requires the
+/// cross gcc toolchains and qemu-user on the host).
+fn cross_enabled() -> bool {
+    std::env::var("MITA_TEST_CROSS").as_deref() == Ok("1")
+}
+
+/// Builds `source` for `target` and runs the result under qemu with `-L sysroot`.
+fn run_cross(source: &str, target: &str, qemu: &str, sysroot: &str) -> String {
+    let dir = tempdir();
+    let src = dir.join("prog.mita");
+    std::fs::write(&src, source).unwrap();
+    let exe = dir.join("prog");
+    build_files(
+        &[src.display().to_string()],
+        &BuildOptions {
+            target: target.into(),
+            output: exe.clone(),
+            emit_mlir: None,
+            keep_temps: false,
+        },
+    )
+    .unwrap();
+    let out = Command::new(qemu)
+        .arg("-L")
+        .arg(sysroot)
+        .arg(&exe)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "cross program failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout).to_string()
+}
+
+#[test]
+fn builds_aarch64_and_runs_under_qemu() {
+    if !cross_enabled() {
+        return;
+    }
+    let out = run_cross(
+        "(celi 20 22)",
+        "aarch64-unknown-linux-gnu",
+        "qemu-aarch64",
+        "/usr/aarch64-linux-gnu",
+    );
+    assert_eq!(out, "42\n");
+}
+
+#[test]
+fn builds_riscv64_and_runs_under_qemu() {
+    if !cross_enabled() {
+        return;
+    }
+    let out = run_cross(
+        "(celi 20 22)",
+        "riscv64-unknown-linux-gnu",
+        "qemu-riscv64",
+        "/usr/riscv64-linux-gnu",
+    );
+    assert_eq!(out, "42\n");
+}

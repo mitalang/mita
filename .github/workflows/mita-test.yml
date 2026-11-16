@@ -16,8 +16,19 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y gcc
-      
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc \
+            llvm-19 \
+            mlir-19-tools \
+            qemu-user \
+            gcc-aarch64-linux-gnu \
+            gcc-riscv64-linux-gnu
+
+      - name: Add LLVM tools to PATH
+        run: echo "/usr/lib/llvm-19/bin" >> "$GITHUB_PATH"
+
       - name: Build FFI test library
         run: gcc -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
       
@@ -26,6 +37,9 @@ jobs:
       
       - name: Run cargo test
         run: cargo test
+
+      - name: Run cross-build tests (aarch64 + riscv64 under qemu)
+        run: MITA_TEST_CROSS=1 cargo test --test native_build -- --nocapture
       
       - name: Load libraries
         run: ./target/release/mita odomu.mita net.mita http.mita

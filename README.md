@@ -42,6 +42,24 @@ Network primitives live in `net.mita` and must be loaded after `odomu.mita`:
 mita odomu.mita net.mita app.mita
 ```
 
+### Native builds
+
+`mita build` compiles `.mita` sources to a native Linux ELF via MLIR/LLVM, without the bytecode VM. It generates MLIR (LLVM dialect), lowers it to LLVM IR with `mlir-translate`, emits an object with `llc`, and links it with an embedded C runtime using the target C compiler.
+
+```bash
+mita build --target x86_64-unknown-linux-gnu app.mita -o app
+mita build --target aarch64-unknown-linux-gnu app.mita -o app-arm64
+mita build --target riscv64-unknown-linux-gnu app.mita -o app-riscv64
+```
+
+Requirements:
+
+- `mlir-translate` and `llc` from LLVM/MLIR 19 (`apt install llvm-19 mlir-19-tools`), on PATH or in `/usr/lib/llvm-19/bin`.
+- A target C compiler: `cc` for x86_64, `aarch64-linux-gnu-gcc` and `riscv64-linux-gnu-gcc` for the cross targets.
+- To *run* cross binaries on the host, use `qemu-aarch64 -L /usr/aarch64-linux-gnu <exe>` or `qemu-riscv64 -L /usr/riscv64-linux-gnu <exe>`.
+
+Use `--emit-mlir <path>` to inspect the generated MLIR, and `--keep-temps` to keep the intermediate object files.
+
 ### Specification
 In the MITA language, all data are in the form of symbolic expressions usually referred to as S-expressions. S-expressions are of indefinite length and have a branching tree type of structure, so that significant subexpressions can be readily isolated. [1](#1)
 The most elementary type of S-expression is the sada (solid) symbol. A sada symbol is a string of no more than thirty numerals and letters; the first character must be a letter. 

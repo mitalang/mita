@@ -28,8 +28,12 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 │   │   ├── exec.rs  # VM execution loop, CallFrame, register file
 │   │   ├── isa.rs   # Instruction encoding/decoding (RISC-V style)
 │   │   └── builtins.rs # VM builtin functions (arithmetic, cons, FFI)
-│   └── compiler/    # AST-to-bytecode compiler
-│       └── mod.rs   # Compiler with register allocation
+│   ├── compiler/    # AST-to-bytecode compiler
+│   │   └── mod.rs   # Compiler with register allocation
+│   └── backend/     # Native (MLIR/LLVM) codegen + build pipeline
+│       ├── mod.rs   # Backend module exports
+│       ├── mlir.rs  # MITA -> LLVM-dialect MLIR codegen
+│       └── build.rs # `mita build` pipeline (mlir-translate/llc/cc/link)
 ├── tests/           # Integration tests
 │   ├── parse_tests.rs  # Parser unit tests
 │   ├── eval_tests.rs   # Tree interpreter unit tests
@@ -44,6 +48,7 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 │   └── workflows/
 │       ├── mita-test.yml # Main test workflow
 │       └── rust.yml      # Rust build/test workflow
+├── runtime/         # Embedded C runtime (mita_runtime.c/.h)
 ├── odomu.mita       # Generic standard library
 ├── net.mita         # Socket primitives
 ├── http.mita        # HTTP server library
@@ -65,7 +70,10 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 | Add language examples | `examples/*.mita` | MITA source files |
 | Update stdlib | `odomu.mita` (core), `net.mita` (sockets), `http.mita` (HTTP) | Loaded in that order by CLI |
 | Add C FFI function | `src/vm/builtins.rs` | `builtin_ffi_exec()`, uses `libloading` |
-| Fix CI | `.github/workflows/*.yml` | Rust toolchain, compile C test lib |
+| Add native codegen | `src/backend/mlir.rs` | `compile()` emits LLVM-dialect MLIR |
+| Change native build pipeline | `src/backend/build.rs` | `build_files()`, `cc_for_target()`, `llc_target_args()` |
+| Change C runtime | `runtime/mita_runtime.c` + `runtime/mita_runtime.h` | Embedded via `include_str!` in `build.rs` |
+| Fix CI | `.github/workflows/*.yml` | Rust toolchain, compile C test lib, cross toolchain + qemu |
 
 ## CONVENTIONS
 - **Library + binary**: `src/lib.rs` exports public API; `src/main.rs` is the CLI binary
@@ -97,6 +105,14 @@ cargo install --path .
 
 # Compile C FFI test library (for VM tests)
 gcc -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
+
+# Native build (MITA -> MLIR -> LLVM -> ELF), per target
+./target/release/mita build --target x86_64-unknown-linux-gnu app.mita -o app
+./target/release/mita build --target aarch64-unknown-linux-gnu app.mita -o app-arm64
+./target/release/mita build --target riscv64-unknown-linux-gnu app.mita -o app-riscv64
+
+# Cross-build tests (requires qemu-user + cross gcc)
+MITA_TEST_CROSS=1 cargo test --test native_build -- --nocapture
 ```
 
 ## BUILT-IN FUNCTIONS
@@ -115,6 +131,23 @@ Syntax: `(mite "libpath.so" "func_name" arg1 arg2)`
 - Calls C function with 0-2 `int64_t` arguments
 - Returns `int64_t` as MITA number
 - Example: `(mite "libm.so" "pow" 2 3)` → `8`
+
+## NATIVE BUILD (mita build)
+`mita build --target <triple> file.mita -o out` compiles MITA to a native Linux ELF:
+
+MITA source → MLIR (LLVM dialect, `src/backend/mlir.rs`) → `mlir-translate --mlir-to-llvmir` → `llc -O2 -filetype=obj -mtriple=<triple> -relocation-model=pic` → object. The embedded C runtime (`runtime/mita_runtime.c/.h`, `include_str!`-ed into the binary) is compiled by the target `cc` and linked into the ELF.
+
+| triple | `llc -mtriple` | CC | run on host |
+|---|---|---|---|
+| `x86_64-unknown-linux-gnu` | same | `cc` | native |
+| `aarch64-unknown-linux-gnu` | same | `aarch64-linux-gnu-gcc` | `qemu-aarch64 -L /usr/aarch64-linux-gnu` |
+| `riscv64-unknown-linux-gnu` | same | `riscv64-linux-gnu-gcc` | `qemu-riscv64 -L /usr/riscv64-linux-gnu` |
+
+- Tool discovery: `MLIR_TRANSLATE` / `LLC` / `CC` env vars → `PATH` → `/usr/lib/llvm-*/bin/`. Unknown triples return a clear error.
+- riscv64: `llc` defaults to soft-float `rv64i`, but Debian's `riscv64-linux-gnu-gcc` is hard double-float (`lp64d`/`rv64imafdc`); `build.rs` adds `-mattr=+m,+a,+f,+d,+c` to `llc` to match.
+- PIE: generated object uses `-relocation-model=pic`; runtime compiled with target cc defaults (PIE on Debian/Ubuntu); final link is PIE. All consistent.
+- Last top-level expression result is auto-printed (matches CLI `load()` behavior).
+- `--emit-mlir <path>` writes the MLIR; `--keep-temps` keeps intermediates.
 
 ## VM ARCHITECTURE
 - **Register file**: 64 registers (X0=zero, X3=temp, X10-X17=arg regs, X18+=saved/local regs)
