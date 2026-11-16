@@ -44,12 +44,30 @@ fn mita_files() -> Vec<PathBuf> {
         let mut entries: Vec<_> = std::fs::read_dir(root.join(dir))
             .unwrap()
             .map(|entry| entry.unwrap().path())
-            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("muhe"))
+            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("mita"))
             .collect();
         entries.sort();
         files.extend(entries);
     }
     files
+}
+
+#[test]
+fn audit_covers_examples_and_bench() {
+    let files = mita_files();
+    assert!(
+        files.iter().any(|path| path.to_string_lossy().contains("/examples/")),
+        "naming audit must include examples/*.mita"
+    );
+    assert!(
+        files.iter().any(|path| path.to_string_lossy().contains("/bench/")),
+        "naming audit must include bench/*.mita"
+    );
+    assert!(
+        files.len() >= 20,
+        "naming audit only found {} .mita files",
+        files.len()
+    );
 }
 
 #[test]
