@@ -34,6 +34,7 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 │   ├── parse_tests.rs  # Parser unit tests
 │   ├── eval_tests.rs   # Tree interpreter unit tests
 │   ├── vm_tests.rs     # VM unit tests
+│   ├── library_test.rs # Standard-library split tests
 │   ├── vm_debug.rs     # VM debug test
 │   └── ffi_test_lib.c  # C test library for FFI
 ├── docs/            # Documentation
@@ -43,7 +44,9 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 │   └── workflows/
 │       ├── mita-test.yml # Main test workflow
 │       └── rust.yml      # Rust build/test workflow
-├── odomu.mita       # Standard library
+├── odomu.mita       # Generic standard library
+├── net.mita         # Socket primitives
+├── http.mita        # HTTP server library
 └── AGENTS.md        # This file
 ```
 
@@ -60,7 +63,7 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 | Modify compiler | `src/compiler/mod.rs` | `compile_expr()`, `compile_call()`, register allocation |
 | Modify CLI behavior | `src/main.rs` | REPL, flags, file loading, panic recovery |
 | Add language examples | `examples/*.mita` | MITA source files |
-| Update stdlib | `odomu.mita` | Loaded at runtime by CLI |
+| Update stdlib | `odomu.mita` (core), `net.mita` (sockets), `http.mita` (HTTP) | Loaded in that order by CLI |
 | Add C FFI function | `src/vm/builtins.rs` | `builtin_ffi_exec()`, uses `libloading` |
 | Fix CI | `.github/workflows/*.yml` | Rust toolchain, compile C test lib |
 
@@ -152,10 +155,10 @@ All library functions now use Hilichurlian (丘丘语) names:
 | remove | `kundala` | remove |
 | flatten | `pupu` | flatten |
 
-## NETWORKING & WEB SERVER (NEW)
-- **C FFI network library**: `src/ffi_mita_net.c` → `libmita_net.so` with TCP/HTTP primitives
-- **Network builtins** (odomu.mita): `net_listen`, `net_accept`, `net_read`, `net_get_buffer`, `net_write`, `net_close`, `http_parse_path`, `http_ok`, `http_not_found`
-- **Server functions** (odomu.mita): `serve_once`, `serve`, `run_server`
+## NETWORKING & WEB SERVER
+- **Network library** (`net.mita`): `net_listen`, `net_accept`, `net_read`, `net_write`, `net_close`
+- **HTTP library** (`http.mita`): `http_ok`, `http_not_found`, `url_decode`, `handle_connection`, `serve_loop`, `run_server`
+- **Load order**: `odomu.mita` → `net.mita` → `http.mita`
 - **Web server examples**: `examples/web_server.mita`, `web_server_test.mita`, `web_server_test2.mita`
 - **VM `print` builtin**: index 15, prints values to stdout
 
@@ -164,7 +167,6 @@ All library functions now use Hilichurlian (丘丘语) names:
 - **Variadic lambdas**: VM `enter_closure` builds cons list from X10..X10+argc-1 when `FuncObject.variadic=true`
 - **Register file expanded**: 32 → 64 registers to support complex odomu.mita functions
 - **`enter_closure` register clearing removed**: No longer clobbers caller registers (was causing nil args)
-- **`serve_once` simplified**: Reduced nested `tido` bindings to avoid register exhaustion
 - **String lexer fixed**: quotes no longer included in `Token.text` for `TokenType::String`
 
 ## NOTES
@@ -174,5 +176,7 @@ All library functions now use Hilichurlian (丘丘语) names:
 - `shato` uses structural equality via `equal_expr` (not numeric equality)
 - `nil` and `nya` are treated as equal in `equal_expr` (matching Go's `isNya()` behavior)
 - `kuzi`/`todo` are variadic via `mita args` pattern (single atom formal captures entire arg list)
+- `tido` takes a single body form; use `in` to sequence multiple body expressions
+- Parenthesize lambda formals: `(mita (x) ...)` is fixed-arity, `(mita x ...)` is variadic
 - `ELEMENTARY` uses `std::sync::OnceLock` (no unsafe code)
 - VM uses `libloading` (unsafe required for `Library::new` and `Symbol::get`)

@@ -36,6 +36,12 @@ You can load library like
 mita odomu.mita
 ```
 
+Network primitives live in `net.mita` and must be loaded after `odomu.mita`:
+
+```bash
+mita odomu.mita net.mita app.mita
+```
+
 ### Specification
 In the MITA language, all data are in the form of symbolic expressions usually referred to as S-expressions. S-expressions are of indefinite length and have a branching tree type of structure, so that significant subexpressions can be readily isolated. [1](#1)
 The most elementary type of S-expression is the sada (solid) symbol. A sada symbol is a string of no more than thirty numerals and letters; the first character must be a letter. 
@@ -87,6 +93,20 @@ sada
 * `biat` logical not
 * `kundala` remove element
 * `pupu` flatten list
+
+### Network library (net.mita)
+
+* `net_listen` create a listening socket
+* `net_accept` accept a connection
+* `net_read` read from a socket
+* `net_write` write to a socket
+* `net_close` close a socket
+
+HTTP helpers live in `http.mita`; load it after `net.mita`:
+
+```bash
+mita odomu.mita net.mita http.mita app.mita
+```
 
 ### Pre-defined variables
 

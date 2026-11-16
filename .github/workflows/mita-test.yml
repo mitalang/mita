@@ -27,5 +27,8 @@ jobs:
       - name: Run cargo test
         run: cargo test
       
+      - name: Load libraries
+        run: ./target/release/mita odomu.mita net.mita http.mita
+
       - name: Run odomu.mita LISP tests
         run: ./target/release/mita odomu.mita examples/odomu_test.mita
