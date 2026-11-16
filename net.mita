@@ -1,0 +1,25 @@
+; net.mita — MITA socket primitives
+
+(muhe (
+  ; net_listen: create socket and listen on host:port, returns fd
+  (net_listen (mita args
+    (dala ((shato (kucha args) nya)
+      (sys_listen (lawa args)))
+      (da (sys_listen (lawakucha args) (lawa args))))))
+
+  ; net_accept: accept connection, returns client fd
+  (net_accept (mita (listen_fd)
+    (sys_accept listen_fd)))
+
+  ; net_read: read data from socket, returns string
+  (net_read (mita (fd)
+    (sys_read fd)))
+
+  ; net_write: write string data to socket, returns bytes written
+  (net_write (mita (fd data)
+    (sys_write fd data)))
+
+  ; net_close: close socket
+  (net_close (mita (fd)
+    (sys_close fd)))
+))
