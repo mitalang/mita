@@ -5,6 +5,7 @@ pub mod eval;
 pub mod elementary;
 pub mod vm;
 pub mod compiler;
+pub mod backend;
 
 pub use token::{Token, TokenType, EOFRUNE};
 pub use expr::Expr;

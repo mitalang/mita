@@ -2,6 +2,17 @@ use std::env;
 use std::io::{self, BufRead, Write};
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 && args[1] == "build" {
+        match mita::backend::build::run_cli(&args[2..]) {
+            Ok(()) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
     let mut print_sexpr = false;
     let mut do_prompt = true;
     let mut prompt_str = "> ".to_string();
@@ -9,7 +20,6 @@ fn main() {
     let mut script_args = Vec::new();
     let mut pass_args = false;
 
-    let args: Vec<String> = env::args().collect();
     let mut i = 1;
     while i < args.len() {
         if pass_args {
