@@ -1,4 +1,4 @@
-# The MITA Programming Language 
+# The MITA Programming Language
 
 🥩 dada!
 
@@ -62,41 +62,44 @@ Use `--emit-mlir <path>` to inspect the generated MLIR, and `--keep-temps` to ke
 
 ### Specification
 In the MITA language, all data are in the form of symbolic expressions usually referred to as S-expressions. S-expressions are of indefinite length and have a branching tree type of structure, so that significant subexpressions can be readily isolated. [1](#1)
-The most elementary type of S-expression is the sada (solid) symbol. A sada symbol is a string of no more than thirty numerals and letters; the first character must be a letter. 
+The most elementary type of S-expression is the `unusi` (one-thing) atom/symbol. An `unusi` symbol is a string of no more than thirty numerals and letters; the first character must be a letter.
 
 ```lisp
-sada
-(sada . dada)
+unusi
+(unusi . dada)
 ```
 
 ### Built in function
 
-* `mita` anonymous function, same as `lambda` in lisp
-* `upa` concat sada, same as `cons` in lisp
-* `muhe` function define, same as `defn` in lisp
-* `lawa` get first sada from list, same as `car` in lisp
+* `muhe` anonymous function, same as `lambda` in lisp
+* `upa` concat two values, same as `cons` in lisp
+* `sada` function define, same as `defn` in lisp
+* `lawa` get first element from list, same as `car` in lisp
 * `kucha` the rest of list, `cdr`
 * `celi` addition (`+`)
-* `movo` substraction (`-`)
+* `lata` subtraction (`-`)
+* `kuzi` multiplication (`*`)
+* `gusha` division (`/`)
 * `shato` equal (`==`)
 * `nyeshato` not equal (`!=`)
 * `aba` less than (`<`)
 * `unta` greater than (`>`)
 * `abashato` less than and equal (`<=`)
- * `untashato` greater than and equal (`>=`)
- * `plata` quote
- * `tido` let (local binding)
- * `ka` if (conditional)
- * `in` progn (sequential evaluation)
- * `plama` setq (variable assignment)
+* `untashato` greater than and equal (`>=`)
+* `plata` quote
+* `zido` let (local binding)
+* `ka` if (conditional)
+* `in` progn (sequential evaluation)
+* `movo` setq (variable assignment)
+* `beru` print
 
 ### Library functions (odomu.mita)
 
 * `lawakucha` cadr (car of cdr)
 * `lawakuchakucha` caddr (car of cdr of cdr)
 * `kuchakucha` cddr (cdr of cdr)
-* `sada` list constructor
-* `tiga` list length
+* `tiga` list constructor
+* `tigamani` list length
 * `si` map
 * `valo` filter
 * `mosi` reduce
@@ -104,13 +107,36 @@ sada
 * `domu` reverse
 * `mito` assoc
 * `odomu` member
-* `zido` last element
+* `untasi` last element
 * `eleka` nth element
-* `kuzi` logical and
+* `kuzitomo` logical and
 * `todo` logical or
 * `biat` logical not
-* `kundala` remove element
-* `pupu` flatten list
+* `ika` remove element
+* `tigakundala` flatten list
+
+Additional list/predicate/set functions:
+
+* `nyasi` null predicate
+* `upasi` consp predicate
+* `unusi` atom predicate
+* `tigasi` listp predicate
+* `mitosi` find
+* `elekasi` position
+* `manisi` count
+* `sadasi` copy list
+* `kuchasi` subseq
+* `tomosi` adjoin
+* `tomotomo` union
+* `lawatomo` intersection
+* `kundalasi` set difference
+* `movosi` subst
+* `tigatomo` every
+* `tigakucha` some
+* `kasi` when
+* `nyekasi` unless
+* `inusi` prog1
+* `indu` prog2
 
 ### Network library (net.mita)
 
@@ -137,11 +163,11 @@ mita odomu.mita net.mita http.mita app.mita
 * `dudu` four, 4
 * `mani` five, 5
 
-### License 
+### License
 MITA is released under Sumeru Akademiya License.
 
 ### Special Thanks
-This project is inspired by Rob Pike https://github.com/robpike/lisp 
+This project is inspired by Rob Pike https://github.com/robpike/lisp
 
 ### TODO
 - [ ] more easy example

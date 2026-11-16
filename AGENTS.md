@@ -83,7 +83,7 @@ Now includes a **register-based bytecode VM** with an AST-to-bytecode compiler a
 - **Expr enum**: Uses `Rc<Expr>` for shared ownership (no GC, reference counted)
 - **VM Value enum**: Uses `Rc<str>`, `Rc<(Value, Value)>`, `Rc<Closure>` for shared ownership
 - **Register allocation**: Lambda params mapped to X18+ to avoid arg register clobbering
-- **Special forms**: `mita` (lambda), `dala` (cond), `plata` (quote), `muhe` (defun), `tido` (let), `ka` (if), `in` (progn), `plama` (setq)
+- **Special forms**: `muhe` (lambda), `dala` (cond), `plata` (quote), `sada` (defun), `zido` (let), `ka` (if), `in` (progn), `movo` (setq)
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Panics for normal control flow**: Parse errors, undefined symbols, stack overflow all panic rather than return errors
@@ -117,7 +117,7 @@ MITA_TEST_CROSS=1 cargo test --test native_build -- --nocapture
 
 ## BUILT-IN FUNCTIONS
 ### Tree Interpreter (src/elementary.rs)
-Arithmetic: `celi` (+), `movo` (-), `celida` (*), `movoda` (/)
+Arithmetic: `celi` (+), `lata` (-), `kuzi` (*), `gusha` (/)
 Comparison: `shato` (==), `nyeshato` (!=), `aba` (<), `unta` (>), `abashato` (<=), `untashato` (>=)
 List: `lawa` (car), `kucha` (cdr), `upa` (cons)
 
@@ -164,15 +164,15 @@ MITA source → MLIR (LLVM dialect, `src/backend/mlir.rs`) → `mlir-translate -
 - **Tail detection**: `is_tail && !is_toplevel` determines CALL vs TAIL vs RET
 
 ## LIBRARY FUNCTIONS (odomu.mita)
-All library functions now use Hilichurlian (丘丘语) names:
+All library functions use Hilichurlian (丘丘语) names aligned with their meanings:
 
 | Function | Hilichurlian | Lisp Equivalent |
 |----------|-------------|-----------------|
 | cadr | `lawakucha` | (car (cdr x)) |
 | caddr | `lawakuchakucha` | (car (cdr (cdr x))) |
 | cddr | `kuchakucha` | (cdr (cdr x)) |
-| list | `sada` | list |
-| length | `tiga` | length |
+| list | `tiga` | list |
+| length | `tigamani` | length |
 | map | `si` | map |
 | filter | `valo` | filter |
 | reduce | `mosi` | reduce |
@@ -180,13 +180,33 @@ All library functions now use Hilichurlian (丘丘语) names:
 | reverse | `domu` | reverse |
 | assoc | `mito` | assoc |
 | member | `odomu` | member |
-| last | `zido` | last |
+| last | `untasi` | last |
 | nth | `eleka` | nth |
-| and | `kuzi` | and |
+| and | `kuzitomo` | and |
 | or | `todo` | or |
 | not | `biat` | not |
-| remove | `kundala` | remove |
-| flatten | `pupu` | flatten |
+| remove | `ika` | remove |
+| flatten | `tigakundala` | flatten |
+| null | `nyasi` | null |
+| consp | `upasi` | consp |
+| atom | `unusi` | atom |
+| listp | `tigasi` | listp |
+| find | `mitosi` | find |
+| position | `elekasi` | position |
+| count | `manisi` | count |
+| copy list | `sadasi` | copy-list |
+| subseq | `kuchasi` | subseq |
+| adjoin | `tomosi` | adjoin |
+| union | `tomotomo` | union |
+| intersection | `lawatomo` | intersection |
+| set difference | `kundalasi` | set-difference |
+| subst | `movosi` | subst |
+| every | `tigatomo` | every |
+| some | `tigakucha` | some |
+| when | `kasi` | when |
+| unless | `nyekasi` | unless |
+| prog1 | `inusi` | prog1 |
+| prog2 | `indu` | prog2 |
 
 ## NETWORKING & WEB SERVER
 - **Network library** (`net.mita`): `net_listen`, `net_accept`, `net_read`, `net_write`, `net_close`
@@ -205,11 +225,12 @@ All library functions now use Hilichurlian (丘丘语) names:
 ## NOTES
 - ~~Self-hosted `riscv-builders` runner used in CI (non-standard)~~ → Now uses `ubuntu-latest`
 - `odomu.mita` uses Hilichurlian names for all library functions (not English)
+- `sada` is now defun (solidify); the atom/symbol concept is `unusi` (one-thing)
 - `eval_condition` treats the last clause as an implicit else (returns unevaluated if no remaining clauses)
 - `shato` uses structural equality via `equal_expr` (not numeric equality)
 - `nil` and `nya` are treated as equal in `equal_expr` (matching Go's `isNya()` behavior)
-- `kuzi`/`todo` are variadic via `mita args` pattern (single atom formal captures entire arg list)
-- `tido` takes a single body form; use `in` to sequence multiple body expressions
-- Parenthesize lambda formals: `(mita (x) ...)` is fixed-arity, `(mita x ...)` is variadic
+- `kuzitomo`/`todo` are variadic via `muhe args` pattern (single atom formal captures entire arg list)
+- `zido` takes a single body form; use `in` to sequence multiple body expressions
+- Parenthesize lambda formals: `(muhe (x) ...)` is fixed-arity, `(muhe x ...)` is variadic
 - `ELEMENTARY` uses `std::sync::OnceLock` (no unsafe code)
 - VM uses `libloading` (unsafe required for `Library::new` and `Symbol::get`)
