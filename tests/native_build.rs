@@ -192,6 +192,41 @@ fn builds_and_runs_setq() {
     assert_eq!(out, "(2 . 1)\n");
 }
 
+/// A `dala` whose last clause has a falsy test and an uncallable head reaches
+/// the `mita_panic` fallback at runtime. Regression for the NUL-termination
+/// bug: the panic message must be a proper C string.
+#[test]
+fn cond_implicit_else_panics_on_uncallable_head() {
+    if !tools_available() {
+        return;
+    }
+    let dir = tempdir();
+    let src = dir.join("prog.mita");
+    std::fs::write(&src, "(dala (nye 1))").unwrap();
+    let exe = dir.join("prog");
+    build_files(
+        &[src.display().to_string()],
+        &BuildOptions {
+            target: "x86_64-unknown-linux-gnu".into(),
+            output: exe.clone(),
+            emit_mlir: None,
+            keep_temps: false,
+        },
+    )
+    .unwrap();
+    let out = Command::new(&exe).output().unwrap();
+    assert!(
+        !out.status.success(),
+        "expected panic (non-zero exit), but the program succeeded"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("cond: implicit else clause is not callable"),
+        "stderr did not contain the panic message: {}",
+        stderr
+    );
+}
+
 #[test]
 fn runs_higher_order_lambda() {
     if !tools_available() {

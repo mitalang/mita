@@ -307,12 +307,17 @@ impl<'a> FnCtx<'a> {
             return name.clone();
         }
         let name = format!("@str{}", self.shared.globals.len());
-        let escaped = escape_mlir_string(content);
+        // Emit a NUL-terminated array. Length-delimited consumers
+        // (`mita_string`/`mita_symbol`) pass an explicit length and ignore the
+        // extra byte; C-string consumers (`mita_panic`) rely on the `\00`
+        // terminator to avoid an out-of-bounds read.
+        let mut escaped = escape_mlir_string(content);
+        escaped.push_str("\\00");
         let global = format!(
             "llvm.mlir.global internal constant {}(\"{}\") {{addr_space = 0 : i32}} : !llvm.array<{} x i8>",
             name,
             escaped,
-            content.len()
+            content.len() + 1
         );
         self.shared.globals.push(global);
         self.shared
