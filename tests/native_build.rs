@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use mita::backend::build::{build_files, BuildOptions};
+
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn tool_exists(name: &str) -> bool {
     Command::new(name)
@@ -12,9 +15,11 @@ fn tool_exists(name: &str) -> bool {
 }
 
 fn tempdir() -> PathBuf {
+    let n = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!(
-        "mita-native-{}-{}",
+        "mita-native-{}-{}-{}",
         std::process::id(),
+        n,
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
