@@ -110,6 +110,52 @@ fn build_does_not_require_cc_env() {
 }
 
 #[test]
+fn builds_all_special_forms() {
+    if !tools_available() {
+        return;
+    }
+    let cases = [
+        (
+            "(zido ((f (muhe (x) (celi x 1)))) (f 5))",
+            "6\n",
+        ),
+        ("(zido ((f (muhe () 42))) (f))", "42\n"),
+        (
+            "(sada ((inc (muhe (x) (celi x 1))))) (inc 5)",
+            "6\n",
+        ),
+        (
+            "(sada (\
+               (myeven (muhe (n) (ka (shato n 0) da (myodd (lata n 1))))) \
+               (myodd (muhe (n) (ka (shato n 0) nye (myeven (lata n 1))))))) \
+             (myeven 10)",
+            "da\n",
+        ),
+        ("(zido ((x 1) (y 2)) (celi x y))", "3\n"),
+        ("(zido () 1)", "1\n"),
+        ("(zido ((x 1)) (zido ((x 2)) x))", "2\n"),
+        ("(ka da 'yes 'no)", "yes\n"),
+        ("(ka nye 'yes 'no)", "no\n"),
+        ("(ka 42 'yes 'no)", "no\n"),
+        ("(dala ((shato 1 2) 'a) (da 'b))", "b\n"),
+        ("(dala ((shato 1 2) 'a) 'fallback)", "fallback\n"),
+        ("(dala ((shato 1 2) 'a) (celi 1 2))", "3\n"),
+        ("(in 1 2 3)", "3\n"),
+        ("(in)", "nil\n"),
+        (
+            "(zido ((x 1) (y 2)) (in (movo x 3 y 4) (celi x y)))",
+            "7\n",
+        ),
+        ("'a", "a\n"),
+        ("'(1 2)", "(1 2)\n"),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(run_program(source), expected, "source: {}", source);
+    }
+}
+
+#[test]
 fn runs_expressions_control_flow_and_locals() {
     if !tools_available() {
         return;

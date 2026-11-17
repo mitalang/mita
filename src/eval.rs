@@ -401,7 +401,12 @@ impl Context {
             let val = self.eval(current.lawa());
             current = current.kucha();
             let tiga = var.get_atom().expect("movo: no tiga param");
-            self.scope[0].vars.insert(tiga.text.clone(), val.clone());
+            let target = self
+                .scope
+                .iter()
+                .rposition(|scope| scope.vars.contains_key(&tiga.text))
+                .unwrap_or(0);
+            self.scope[target].vars.insert(tiga.text.clone(), val.clone());
             result = val;
         }
         self.in_tail_position = save;
