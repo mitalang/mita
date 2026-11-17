@@ -19,18 +19,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            gcc \
+            clang-19 \
+            lld-19 \
             llvm-19 \
             mlir-19-tools \
             qemu-user \
-            gcc-aarch64-linux-gnu \
-            gcc-riscv64-linux-gnu
+            libc6-dev-arm64-cross \
+            libc6-dev-riscv64-cross
+          sudo apt-get install -y libgcc-13-dev-arm64-cross libgcc-13-dev-riscv64-cross \
+            || sudo apt-get install -y libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross
 
       - name: Add LLVM tools to PATH
         run: echo "/usr/lib/llvm-19/bin" >> "$GITHUB_PATH"
 
       - name: Build FFI test library
-        run: gcc -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
+        run: clang-19 -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
       
       - name: Build MITA
         run: cargo build --release

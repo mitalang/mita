@@ -1,8 +1,8 @@
 //! Native build pipeline: MITA source -> MLIR -> LLVM IR -> object -> ELF.
 //!
 //! `build_files` parses the inputs, generates LLVM-dialect MLIR, then drives
-//! `mlir-translate`, `llc`, and the target C compiler (which also compiles the
-//! embedded runtime and links the final executable). The runtime sources are
+//! `mlir-translate`, `llc`, and `clang` + `lld` (which also compile the
+//! embedded runtime and link the final executable). The runtime sources are
 //! embedded with `include_str!` so the `mita` binary has no install-time
 //! dependency on the repository layout.
 
@@ -57,22 +57,12 @@ pub fn build_files(inputs: &[String], opts: &BuildOptions) -> Result<(), String>
 
     let mlir_translate = find_tool("MLIR_TRANSLATE", "mlir-translate", "apt install mlir-19-tools")?;
     let llc = find_tool("LLC", "llc", "install the llvm toolchain")?;
-    let cc_name = cc_for_target(&opts.target)?;
-    // `CC` takes precedence over the target-specific compiler in `find_tool`.
-    // For a non-x86_64 target, a user-set `CC` (typically the host `cc`)
-    // silently overrides the intended cross compiler, so surface a warning
-    // without changing the documented precedence.
-    if opts.target != "x86_64-unknown-linux-gnu" {
-        if let Ok(cc_env) = std::env::var("CC") {
-            if !cc_env.trim().is_empty() {
-                eprintln!(
-                    "mita: warning: CC={} overrides the default target compiler '{}' for '{}'",
-                    cc_env, cc_name, opts.target
-                );
-            }
-        }
-    }
-    let cc = find_tool("CC", cc_name, "install a C compiler")?;
+    let clang = find_tool("CLANG", "clang", "install clang/LLVM")?;
+    let lld = find_tool("LLD", "ld.lld", "install lld/LLVM")?;
+    let lld_dir = std::path::Path::new(&lld)
+        .parent()
+        .ok_or_else(|| format!("cannot determine lld directory from '{}'", lld))?;
+    let clang_args = clang_target_args(&opts.target, lld_dir)?;
 
     let tmp = temp_dir();
     std::fs::create_dir_all(&tmp)
@@ -121,23 +111,23 @@ pub fn build_files(inputs: &[String], opts: &BuildOptions) -> Result<(), String>
         run(Command::new(&llc).args(&llc_args), "llc")?;
 
         run(
-            Command::new(&cc).args([
+            Command::new(&clang).args(&clang_args).args([
                 "-c",
                 runtime_c.to_str().unwrap(),
                 "-o",
                 runtime_obj.to_str().unwrap(),
             ]),
-            "cc (runtime)",
+            "clang (runtime)",
         )?;
 
         run(
-            Command::new(&cc).args([
+            Command::new(&clang).args(&clang_args).args([
                 obj_path.to_str().unwrap(),
                 runtime_obj.to_str().unwrap(),
                 "-o",
                 opts.output.to_str().unwrap(),
             ]),
-            "cc (link)",
+            "clang/lld (link)",
         )?;
 
         Ok(())
@@ -195,31 +185,102 @@ pub fn run_cli(args: &[String]) -> Result<(), String> {
     build_files(&inputs, &opts)
 }
 
-/// Maps a target triple to the C compiler used to build/link the runtime.
-///
-/// The runtime C and the generated object are both consumed by this compiler,
-/// so the whole pipeline is target-consistent (no host-cc leakage).
-fn cc_for_target(target: &str) -> Result<&'static str, String> {
+/// Builds the target-specific `clang` arguments used for both runtime
+/// compilation and final linking. No external `cc`/`gcc` executable is used;
+/// clang drives `lld` for the link, and cross sysroot headers/libraries come
+/// from the installed target libc packages.
+fn clang_target_args(target: &str, lld_dir: &std::path::Path) -> Result<Vec<String>, String> {
+    let mut args = vec![
+        format!("-B{}", lld_dir.display()),
+        "-fuse-ld=lld".to_string(),
+    ];
+
     match target {
-        "x86_64-unknown-linux-gnu" => Ok("cc"),
-        "aarch64-unknown-linux-gnu" => Ok("aarch64-linux-gnu-gcc"),
-        "riscv64-unknown-linux-gnu" => Ok("riscv64-linux-gnu-gcc"),
-        other => Err(format!(
-            "target '{}' is not yet supported (supported: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, riscv64-unknown-linux-gnu)",
-            other
-        )),
+        "x86_64-unknown-linux-gnu" => {}
+        "aarch64-unknown-linux-gnu" => add_cross_args("aarch64-linux-gnu", target, &mut args)?,
+        "riscv64-unknown-linux-gnu" => {
+            add_cross_args("riscv64-linux-gnu", target, &mut args)?;
+            // Match Debian's hard-double-float riscv64 ABI.
+            args.push("-march=rv64imafdc".to_string());
+            args.push("-mabi=lp64d".to_string());
+        }
+        other => {
+            return Err(format!(
+                "target '{}' is not yet supported (supported: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, riscv64-unknown-linux-gnu)",
+                other
+            ))
+        }
     }
+
+    Ok(args)
 }
 
-/// Extra `llc` feature flags needed to match the target C compiler's default
-/// float ABI, so the generated object and the compiled runtime link cleanly.
+fn add_cross_args(
+    prefix: &str,
+    target: &str,
+    args: &mut Vec<String>,
+) -> Result<(), String> {
+    let sysroot = std::path::PathBuf::from(format!("/usr/{}", prefix));
+    let include = sysroot.join("include");
+    let lib = sysroot.join("lib");
+    if !include.exists() || !lib.exists() {
+        return Err(format!(
+            "missing cross sysroot '{}' for {} (install libc6-dev-{}-cross)",
+            sysroot.display(),
+            target,
+            prefix
+        ));
+    }
+
+    let gcc_dir = find_gcc_cross_dir(prefix)?;
+    args.push(format!("--target={}", target));
+    args.push("-isystem".to_string());
+    args.push(include.display().to_string());
+    args.push(format!("-L{}", lib.display()));
+    args.push(format!("-B{}", gcc_dir.display()));
+    Ok(())
+}
+
+/// Finds the newest `/usr/lib/gcc-cross/<prefix>/<version>` directory. clang
+/// needs it for `crtbegin*.o`/`crtend*.o` and `libgcc`; no gcc executable is
+/// invoked. The target libc/libgcc runtime packages still provide these.
+fn find_gcc_cross_dir(prefix: &str) -> Result<std::path::PathBuf, String> {
+    let base = std::path::Path::new("/usr/lib/gcc-cross").join(prefix);
+    let mut versions: Vec<(u64, std::path::PathBuf)> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&base) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let name = path
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            if let Ok(version) = name.parse::<u64>() {
+                versions.push((version, path));
+            }
+        }
+    }
+    versions.sort_by_key(|(version, _)| *version);
+    versions
+        .pop()
+        .map(|(_, path)| path)
+        .ok_or_else(|| {
+            format!(
+                "missing cross GCC runtime under '{}' (install libgcc-*-dev-{}-cross)",
+                base.display(),
+                prefix
+            )
+        })
+}
+
+/// Extra `llc` feature flags needed to match the target clang/sysroot ABI.
 fn llc_target_args(target: &str) -> Vec<String> {
     match target {
-        // Debian's `riscv64-linux-gnu-gcc` defaults to hard double-float
-        // (`-mabi=lp64d -march=rv64imafdc`), but LLVM's bare `riscv64` triple
-        // defaults to soft-float `rv64i`. The linker rejects the mismatch
-        // ("can't link soft-float modules with double-float modules"), so force
-        // the same feature set as the cross gcc.
+        // LLVM's bare riscv64 triple defaults to soft-float `rv64i`, but the
+        // Debian riscv64 sysroot is hard double-float (`rv64imafdc`/`lp64d`).
+        // Keep the generated object and clang runtime ABI consistent.
         "riscv64-unknown-linux-gnu" => vec!["-mattr=+m,+a,+f,+d,+c".to_string()],
         _ => vec![],
     }

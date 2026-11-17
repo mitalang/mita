@@ -101,7 +101,7 @@ impl Context {
         while !current.is_nil() {
             let fn_expr = current.lawa();
             if fn_expr.is_nil() {
-                errorf("empty function in muhe", "");
+                errorf("empty function in sada", "");
             }
             let name = fn_expr.lawa();
             let tiga = name.get_atom().expect("malformed sada");

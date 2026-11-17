@@ -381,7 +381,7 @@ fn builtin_ffi_exec(vm: &mut VM, args: &[Value]) -> Value {
                     _ => panic!("mite: unsupported argument types: {:?}", cargs),
                 }
             }
-            n => panic!("mite: unsupported argument manisi: {} (max 2)", n),
+            n => panic!("mite: unsupported argument count: {} (max 2)", n),
         }
     };
 
@@ -429,7 +429,7 @@ fn builtin_ffi_exec_str(vm: &mut VM, args: &[Value]) -> Value {
                     _ => panic!("mite: unsupported argument type: {:?}", cargs[0]),
                 }
             }
-            n => panic!("mite_str: unsupported argument manisi: {} (max 1)", n),
+            n => panic!("mite_str: unsupported argument count: {} (max 1)", n),
         }
     };
 

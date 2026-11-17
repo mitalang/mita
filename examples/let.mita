@@ -1,5 +1,5 @@
-; let 绑定示例 (tido)
-; tido = let, 局部变量绑定
+; let 绑定示例 (zido)
+; zido = let, 局部变量绑定
 
 ; 基本绑定
 (zido ((x unu) (y du))

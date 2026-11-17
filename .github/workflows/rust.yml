@@ -19,10 +19,10 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     
     - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y gcc
+      run: sudo apt-get update && sudo apt-get install -y clang
     
     - name: Build FFI test library
-      run: gcc -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
+      run: clang -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
     
     - name: Build
       run: cargo build --verbose

@@ -11,27 +11,27 @@
   ; cddr: (kuchakucha '(1 2 3)) => (3)
   (kuchakucha (muhe (lst) (kucha (kucha lst))))
 
-  ; sada: (sada 1 2 3) => (1 2 3)
+  ; tiga: (tiga 1 2 3) => (1 2 3)
   (tiga (muhe args args))
 
-  ; tiga: (tiga '(1 2 3)) => 3
+  ; tigamani: (tigamani '(1 2 3)) => 3
   (tigamani (muhe (lst)
     (dala ((todo (shato lst nya) (todo (shato lst '()) (shato lst nil))) 0)
       (da (celi unu (tigamani (kucha lst)))))))
 
-  ; si: (si (mita (x) (celi x x)) '(1 2 3)) => (2 4 6)
+  ; si: (si (muhe (x) (celi x x)) '(1 2 3)) => (2 4 6)
   (si (muhe (f lst)
     (dala ((shato lst nya) '())
       (da (upa (f (lawa lst)) (si f (kucha lst)))))))
 
-  ; valo: (valo (mita (x) (aba x du)) '(1 2 3)) => (1)
+  ; valo: (valo (muhe (x) (aba x du)) '(1 2 3)) => (1)
   (valo (muhe (pred lst)
     (dala ((shato lst nya) '())
       (da (dala ((pred (lawa lst))
         (upa (lawa lst) (valo pred (kucha lst))))
         (valo pred (kucha lst)))))))
 
-  ; mosi: (mosi (mita (a b) (celi a b)) 0 '(1 2 3)) => 6
+  ; mosi: (mosi (muhe (a b) (celi a b)) 0 '(1 2 3)) => 6
   (mosi (muhe (f acc lst)
     (dala ((shato lst nya) acc)
       (da (mosi f (f acc (lawa lst)) (kucha lst))))))
@@ -57,7 +57,7 @@
       (da (dala ((shato x (lawa lst)) da)
         (odomu x (kucha lst)))))))
 
-  ; zido: (zido '(1 2 3)) => 3
+  ; untasi: (untasi '(1 2 3)) => 3
   (untasi (muhe (lst)
     (dala ((shato (kucha lst) nya) (lawa lst))
       (da (untasi (kucha lst))))))
@@ -67,7 +67,7 @@
     (dala ((shato n 0) (lawa lst))
       (da (eleka (lata n unu) (kucha lst))))))
 
-  ; kuzi: (kuzi da da nye) => nye
+  ; kuzitomo: (kuzitomo da da nye) => nye
   (kuzitomo (muhe args
     (mosi (muhe (a b) (dala ((shato a da) b) a)) da args)))
 
@@ -78,13 +78,13 @@
   ; biat: (biat (da)) => nye
   (biat (muhe (x) (dala ((shato x da) nye) da)))
 
-  ; kundala: (kundala 'a '(a b a c)) => (b c)
+  ; ika: (ika 'a '(a b a c)) => (b c)
   (ika (muhe (x lst)
     (dala ((shato lst nya) '())
       (da (dala ((shato x (lawa lst)) (ika x (kucha lst)))
         (upa (lawa lst) (ika x (kucha lst))))))))
 
-  ; pupu: (pupu '((1 2) (3 (4 5)))) => (1 2 3 4 5)
+  ; tigakundala: (tigakundala '((1 2) (3 (4 5)))) => (1 2 3 4 5)
   (tigakundala (muhe (lst)
     (dala ((shato lst nya) '())
       (da (dala ((shato lst (upa (lawa lst) (kucha lst)))
@@ -94,14 +94,14 @@
   ; NEW: null predicate
   (nyasi (muhe (x) (shato x nya)))
 
-  ; NEW: consp predicate (checks if x is a cons cell)
+  ; NEW: upasi predicate (checks if x is a cons cell)
   (upasi (muhe (x)
     (dala ((shato x nya) nye)
       (da (dala ((shato x '()) nye)
         (da (dala ((shato x nil) nye)
           (da da))))))))
 
-  ; NEW: atom predicate (opposite of consp)
+  ; NEW: unusi predicate (opposite of upasi)
   (unusi (muhe (x) (biat (upasi x))))
 
   ; NEW: listp predicate (true if x is nil or cons)
@@ -151,14 +151,14 @@
         (dala ((odomu x rest) rest)
           (da (upa x rest))))))))
 
-  ; NEW: intersection - returns intersection of two lists (without tido)
+  ; NEW: intersection - returns intersection of two lists (without zido binding)
   (lawatomo (muhe (a b)
     (dala ((shato a nya) '())
       (da (dala ((odomu (lawa a) b)
         (upa (lawa a) (lawatomo (kucha a) b)))
         (lawatomo (kucha a) b))))))
 
-  ; NEW: set_difference - returns elements in a not in b (without tido)
+  ; NEW: set_difference - returns elements in a not in b (without zido binding)
   (kundalasi (muhe (a b)
     (dala ((shato a nya) '())
       (da (dala ((odomu (lawa a) b)

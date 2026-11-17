@@ -11,10 +11,10 @@
 ; kuchakucha
 (kuchakucha '(1 2 3)) ; => (3)
 
-; sada
+; tigamani
 (tiga 1 2 3) ; => (1 2 3)
 
-; tiga
+; tigamani
 (tigamani '(1 2 3)) ; => 3
 
 ; si
@@ -38,13 +38,13 @@
 ; odomu
 (odomu 'a '(b a c)) ; => da
 
-; zido
+; untasi
 (untasi '(1 2 3)) ; => 3
 
 ; eleka
 (eleka 1 '(a b c)) ; => b
 
-; kuzi
+; kuzitomo
 (kuzitomo da da nye) ; => nye
 
 ; todo
@@ -53,8 +53,8 @@
 ; biat
 (biat da) ; => nye
 
-; kundala
+; ika
 (ika 'a '(a b a c)) ; => (b c)
 
-; pupu
+; tigakundala
 (tigakundala '((1 2) (3 (4 5)))) ; => (1 2 3 4 5)

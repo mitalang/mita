@@ -1,5 +1,5 @@
-; 变量赋值示例 (plama)
-; plama = setq, 修改变量值
+; 变量赋值示例 (movo)
+; movo = setq, 修改变量值
 
 ; 基本赋值
 (zido ((x 0))

@@ -104,14 +104,14 @@ cargo test
 cargo install --path .
 
 # Compile C FFI test library (for VM tests)
-gcc -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
+clang -shared -fPIC -o tests/libmita_test.so tests/ffi_test_lib.c
 
 # Native build (MITA -> MLIR -> LLVM -> ELF), per target
 ./target/release/mita build --target x86_64-unknown-linux-gnu app.mita -o app
 ./target/release/mita build --target aarch64-unknown-linux-gnu app.mita -o app-arm64
 ./target/release/mita build --target riscv64-unknown-linux-gnu app.mita -o app-riscv64
 
-# Cross-build tests (requires qemu-user + cross gcc)
+# Cross-build tests (requires qemu-user + cross libc/libgcc)
 MITA_TEST_CROSS=1 cargo test --test native_build -- --nocapture
 ```
 
@@ -135,17 +135,18 @@ Syntax: `(mite "libpath.so" "func_name" arg1 arg2)`
 ## NATIVE BUILD (mita build)
 `mita build --target <triple> file.mita -o out` compiles MITA to a native Linux ELF:
 
-MITA source → MLIR (LLVM dialect, `src/backend/mlir.rs`) → `mlir-translate --mlir-to-llvmir` → `llc -O2 -filetype=obj -mtriple=<triple> -relocation-model=pic` → object. The embedded C runtime (`runtime/mita_runtime.c/.h`, `include_str!`-ed into the binary) is compiled by the target `cc` and linked into the ELF.
+MITA source → MLIR (LLVM dialect, `src/backend/mlir.rs`) → `mlir-translate --mlir-to-llvmir` → `llc -O2 -filetype=obj -mtriple=<triple> -relocation-model=pic` → object. The embedded C runtime (`runtime/mita_runtime.c/.h`, `include_str!`-ed into the binary) is compiled by `clang` and linked with `ld.lld`; no `cc`/`gcc` executable is invoked.
 
-| triple | `llc -mtriple` | CC | run on host |
+| triple | `llc -mtriple` | compiler/linker | run on host |
 |---|---|---|---|
-| `x86_64-unknown-linux-gnu` | same | `cc` | native |
-| `aarch64-unknown-linux-gnu` | same | `aarch64-linux-gnu-gcc` | `qemu-aarch64 -L /usr/aarch64-linux-gnu` |
-| `riscv64-unknown-linux-gnu` | same | `riscv64-linux-gnu-gcc` | `qemu-riscv64 -L /usr/riscv64-linux-gnu` |
+| `x86_64-unknown-linux-gnu` | same | `clang` + `ld.lld` | native |
+| `aarch64-unknown-linux-gnu` | same | `clang --target=aarch64-linux-gnu` + `ld.lld` | `qemu-aarch64 -L /usr/aarch64-linux-gnu` |
+| `riscv64-unknown-linux-gnu` | same | `clang --target=riscv64-linux-gnu` + `ld.lld` | `qemu-riscv64 -L /usr/riscv64-linux-gnu` |
 
-- Tool discovery: `MLIR_TRANSLATE` / `LLC` / `CC` env vars → `PATH` → `/usr/lib/llvm-*/bin/`. Unknown triples return a clear error.
-- riscv64: `llc` defaults to soft-float `rv64i`, but Debian's `riscv64-linux-gnu-gcc` is hard double-float (`lp64d`/`rv64imafdc`); `build.rs` adds `-mattr=+m,+a,+f,+d,+c` to `llc` to match.
-- PIE: generated object uses `-relocation-model=pic`; runtime compiled with target cc defaults (PIE on Debian/Ubuntu); final link is PIE. All consistent.
+- Tool discovery: `MLIR_TRANSLATE` / `LLC` / `CLANG` / `LLD` env vars → `PATH` → `/usr/lib/llvm-*/bin/`. Unknown triples return a clear error.
+- Cross sysroots: `/usr/aarch64-linux-gnu` and `/usr/riscv64-linux-gnu` provide headers/libs; `/usr/lib/gcc-cross/<triple>/<version>` provides crt/libgcc. No gcc executable is needed.
+- riscv64: `llc` defaults to soft-float `rv64i`, but Debian's riscv64 sysroot is hard double-float (`lp64d`/`rv64imafdc`); `build.rs` adds `-mattr=+m,+a,+f,+d,+c` to `llc` and `-march=rv64imafdc -mabi=lp64d` to clang.
+- PIE: generated object uses `-relocation-model=pic`; clang/lld link PIE by default.
 - Last top-level expression result is auto-printed (matches CLI `load()` behavior).
 - `--emit-mlir <path>` writes the MLIR; `--keep-temps` keeps intermediates.
 

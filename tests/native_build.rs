@@ -77,6 +77,34 @@ fn builds_and_runs_add_program() {
 }
 
 #[test]
+fn build_does_not_require_cc_env() {
+    if !tools_available() {
+        return;
+    }
+    let dir = tempdir();
+    let src = dir.join("no-cc.mita");
+    std::fs::write(&src, "(celi 20 22)").unwrap();
+    let exe = dir.join("no-cc");
+    let out = Command::new(env!("CARGO_BIN_EXE_mita"))
+        .env("CC", "/definitely/not/a/compiler")
+        .args([
+            "build",
+            src.to_str().unwrap(),
+            "-o",
+            exe.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "mita build should not need CC:\n{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let run = Command::new(&exe).output().unwrap();
+    assert_eq!(String::from_utf8_lossy(&run.stdout), "42\n");
+}
+
+#[test]
 fn runs_expressions_control_flow_and_locals() {
     if !tools_available() {
         return;
@@ -283,8 +311,8 @@ fn local_lambda_shadows_builtin() {
     assert_eq!(out, "25\n");
 }
 
-/// Cross builds are opt-in: only run when `MITA_TEST_CROSS=1` (requires the
-/// cross gcc toolchains and qemu-user on the host).
+/// Cross builds are opt-in: only run when `MITA_TEST_CROSS=1` (requires target
+/// sysroot libc/libgcc and qemu-user on the host).
 fn cross_enabled() -> bool {
     std::env::var("MITA_TEST_CROSS").as_deref() == Ok("1")
 }

@@ -54,8 +54,8 @@ mita build --target riscv64-unknown-linux-gnu app.mita -o app-riscv64
 
 Requirements:
 
-- `mlir-translate` and `llc` from LLVM/MLIR 19 (`apt install llvm-19 mlir-19-tools`), on PATH or in `/usr/lib/llvm-19/bin`.
-- A target C compiler: `cc` for x86_64, `aarch64-linux-gnu-gcc` and `riscv64-linux-gnu-gcc` for the cross targets.
+- `mlir-translate`, `llc`, `clang`, and `ld.lld` from LLVM/MLIR 19 (`apt install llvm-19 mlir-19-tools clang-19 lld-19`), on PATH or in `/usr/lib/llvm-19/bin`.
+- For cross targets, the target libc and GCC runtime libraries: `libc6-dev-arm64-cross`, `libc6-dev-riscv64-cross`, and `libgcc-*-dev-{arm64,riscv64}-cross`. `clang` drives `ld.lld`; no `gcc`/`cc` executable is invoked.
 - To *run* cross binaries on the host, use `qemu-aarch64 -L /usr/aarch64-linux-gnu <exe>` or `qemu-riscv64 -L /usr/riscv64-linux-gnu <exe>`.
 
 Use `--emit-mlir <path>` to inspect the generated MLIR, and `--keep-temps` to keep the intermediate object files.
